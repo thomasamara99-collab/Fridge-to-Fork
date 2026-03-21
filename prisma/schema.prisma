@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime     @default(now())
+  profile      Profile?
+  fridgeItems  FridgeItem[]
+  logs         DailyLog[]
+  swipes       Swipe[]
+  customMeals  Meal[]       @relation("UserMeals")
+  sessions     Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Profile {
+  id            String  @id @default(cuid())
+  userId        String  @unique
+  user          User    @relation(fields: [userId], references: [id])
+
+  weightKg      Float
+  heightCm      Float
+  age           Int
+  sex           String
+
+  goal          String
+  activityLevel String
+
+  targetCalories  Int
+  targetProtein   Int
+  targetCarbs     Int
+  targetFat       Int
+
+  calculatedTdee  Int
+
+  dietaryFilters      String
+  dislikedIngredients String
+  cuisinePrefs        String
+  cookingSkill        String
+  budget              String
+  trainingDays        String
+}
+
+model Meal {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  emoji       String
+  photoPath   String?
+  category    String
+  colorTheme  String
+
+  calories    Int
+  protein     Int
+  carbs       Int
+  fat         Int
+  fibre       Int
+
+  prepMinutes Int
+  cookMinutes Int
+  difficulty  Int
+
+  tags        String
+  ingredients String
+  steps       String
+
+  isVegetarian Boolean @default(false)
+  isVegan      Boolean @default(false)
+  isGlutenFree Boolean @default(false)
+  isDairyFree  Boolean @default(false)
+  isHalal      Boolean @default(false)
+  isKosher     Boolean @default(false)
+  isNutFree    Boolean @default(false)
+
+  isSeeded  Boolean  @default(true)
+  createdBy String?
+  creator   User?    @relation("UserMeals", fields: [createdBy], references: [id])
+
+  createdAt   DateTime @default(now())
+  swipes      Swipe[]
+  loggedMeals LoggedMeal[]
+}
+
+model FridgeItem {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  name      String
+  category  String
+  quantity  String?
+  expiresAt DateTime?
+  updatedAt DateTime  @updatedAt
+}
+
+model DailyLog {
+  id       String       @id @default(cuid())
+  userId   String
+  user     User         @relation(fields: [userId], references: [id])
+  date     DateTime     @default(now())
+  calories Int          @default(0)
+  protein  Int          @default(0)
+  carbs    Int          @default(0)
+  fat      Int          @default(0)
+  meals    LoggedMeal[]
+}
+
+model LoggedMeal {
+  id       String   @id @default(cuid())
+  logId    String
+  log      DailyLog @relation(fields: [logId], references: [id])
+  mealId   String?
+  meal     Meal?    @relation(fields: [mealId], references: [id])
+  mealName String
+  calories Int
+  protein  Int
+  carbs    Int
+  fat      Int
+  loggedAt DateTime @default(now())
+}
+
+model Swipe {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  mealId    String
+  meal      Meal     @relation(fields: [mealId], references: [id])
+  direction String
+  swipedAt  DateTime @default(now())
+}

@@ -3,21 +3,72 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #fafaf7;
+  --surface: #ffffff;
+  --surface-2: #f4f2ed;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.15);
+
+  --text-primary: #1a1915;
+  --text-secondary: #6b6860;
+  --text-tertiary: #a8a59e;
+
+  --accent: #e05c2a;
+  --accent-light: #faece7;
+  --accent-text: #8c2e0e;
+
+  --green: #2e7d52;
+  --green-light: #eaf5ee;
+  --green-text: #1a4d32;
+
+  --yellow: #d4a017;
+  --yellow-light: #fdf6e3;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-card: 24px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  color: var(--text-primary);
+  background: var(--bg);
+  font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Fraunces", "Times New Roman", serif;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+  }
 }
 
 @layer utilities {
