@@ -29,22 +29,22 @@ export default function Step3Page() {
 
   const hasStats = age && sex && weightKg && heightCm && goalPreset;
   const tdee = useMemo(() => {
-    if (!hasStats) return 0;
+    if (!age || !sex || !weightKg || !heightCm || !goalPreset) return 0;
     return calculateTDEE({
-      weightKg: weightKg!,
-      heightCm: heightCm!,
-      age: age!,
-      sex: sex!,
+      weightKg,
+      heightCm,
+      age,
+      sex,
       activityLevel: "moderate",
     });
-  }, [age, sex, weightKg, heightCm, goalPreset, hasStats]);
+  }, [age, sex, weightKg, heightCm, goalPreset]);
 
   const suggested = useMemo(() => {
-    if (!hasStats) {
+    if (!age || !sex || !weightKg || !heightCm || !goalPreset) {
       return { calories: 0, protein: 0, carbs: 0, fat: 0 };
     }
-    return suggestMacros(tdee, goalPreset, weightKg!);
-  }, [tdee, goalPreset, weightKg, hasStats]);
+    return suggestMacros(tdee, goalPreset, weightKg);
+  }, [age, sex, weightKg, heightCm, goalPreset, tdee]);
 
   const [customMode, setCustomMode] = useState(!useSuggested);
   const [calories, setCalories] = useState(
@@ -57,16 +57,13 @@ export default function Step3Page() {
   const [fat, setFat] = useState(targetFat ?? suggested.fat);
   const [preset, setPreset] = useState<MacroPreset>("custom");
 
-  const helperText = useMemo(() => {
-    if (!hasStats) return "Complete step 1 to see suggestions.";
-    if (goalPreset === "cut") {
-      return "This is a 400 kcal deficit to help you lose ~0.5kg/week.";
-    }
-    if (goalPreset === "bulk") {
-      return "This is a 300 kcal surplus to support muscle growth.";
-    }
-    return "This keeps you steady with balanced energy.";
-  }, [goalPreset, hasStats]);
+  const helperText = !hasStats
+    ? "Complete step 1 to see suggestions."
+    : goalPreset === "cut"
+      ? "This is a 400 kcal deficit to help you lose ~0.5kg/week."
+      : goalPreset === "bulk"
+        ? "This is a 300 kcal surplus to support muscle growth."
+        : "This keeps you steady with balanced energy.";
 
   const applyPreset = (type: MacroPreset, baseCalories = calories) => {
     setPreset(type);

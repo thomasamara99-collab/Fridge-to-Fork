@@ -37,6 +37,8 @@ export default function SwipeDeck({
   const [isAnimating, setIsAnimating] = useState(false);
   const [flashRight, setFlashRight] = useState(false);
 
+  const frontId = front?.id;
+
   const triggerSwipe = useCallback(
     async (direction: SwipeDirection) => {
       if (!front || isAnimating) return;
@@ -65,15 +67,15 @@ export default function SwipeDeck({
   );
 
   useEffect(() => {
-    if (pendingSwipe && front && !isAnimating) {
+    if (pendingSwipe && frontId && !isAnimating) {
       triggerSwipe(pendingSwipe);
     }
-  }, [pendingSwipe, front, isAnimating, triggerSwipe]);
+  }, [pendingSwipe, frontId, isAnimating, triggerSwipe]);
 
   useEffect(() => {
     controls.set({ x: 0, rotate: 0, opacity: 1 });
     x.set(0);
-  }, [front?.id, controls, x]);
+  }, [frontId, controls, x]);
 
   const overlayBadgeClass = useMemo(
     () =>
