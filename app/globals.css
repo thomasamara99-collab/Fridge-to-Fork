@@ -45,7 +45,7 @@ body {
   margin: 0;
   color: var(--text-primary);
   background: var(--bg);
-  font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
 
 img {
@@ -60,7 +60,7 @@ img {
   h4,
   h5,
   h6 {
-    font-family: "Fraunces", "Times New Roman", serif;
+    font-family: var(--font-display), "Times New Roman", serif;
   }
 
   button,

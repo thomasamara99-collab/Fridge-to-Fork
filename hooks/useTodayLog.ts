@@ -2,25 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-type LoggedMeal = {
-  id: string;
-  mealId: string | null;
-  mealName: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  loggedAt: string;
-};
-
-type TodayLog = {
-  id?: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  meals: LoggedMeal[];
-};
+import type { TodayLog } from "../types";
 
 const fetchTodayLog = async (): Promise<TodayLog> => {
   const response = await fetch("/api/log/today");

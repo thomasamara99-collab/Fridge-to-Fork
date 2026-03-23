@@ -9,7 +9,7 @@ import { useSwipeDeck } from "../../../hooks/useSwipeDeck";
 import { useTodayLog } from "../../../hooks/useTodayLog";
 import { useProfile } from "../../../hooks/useProfile";
 import { fetchMealFeed } from "../../../hooks/useMealFeed";
-import type { MealFeedItem } from "../../../types";
+import type { MealFeedItem, TodayLog } from "../../../types";
 
 export default function SwipePage() {
   const {
@@ -56,7 +56,7 @@ export default function SwipePage() {
     shiftDeck();
 
     if (direction === "right") {
-      queryClient.setQueryData(["log", "today"], (current: any) => {
+      queryClient.setQueryData<TodayLog>(["log", "today"], (current) => {
         const base = current ?? {
           calories: 0,
           protein: 0,

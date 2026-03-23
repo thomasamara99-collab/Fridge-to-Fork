@@ -105,6 +105,26 @@ export type DailyLogRecord = {
   fat: number;
 };
 
+export type LoggedMeal = {
+  id: string;
+  mealId: string | null;
+  mealName: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  loggedAt: string;
+};
+
+export type TodayLog = {
+  id?: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  meals: LoggedMeal[];
+};
+
 export type SwipeRecord = {
   mealId: string;
   direction: "left" | "right";
