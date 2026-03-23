@@ -171,7 +171,7 @@ const scoreMeals = (
       continue;
     }
 
-    let fridgeScore = Math.round(fridgePct * 40);
+    const fridgeScore = Math.round(fridgePct * 40);
     const computedTags = [...tags];
     if (fridgePct >= 0.85 && !computedTags.includes("in your fridge")) {
       computedTags.push("in your fridge");
@@ -181,8 +181,6 @@ const scoreMeals = (
       input.profile.targetCalories - input.todayLog.calories;
     const remainingProtein =
       input.profile.targetProtein - input.todayLog.protein;
-    const remainingCarbs = input.profile.targetCarbs - input.todayLog.carbs;
-    const remainingFat = input.profile.targetFat - input.todayLog.fat;
 
     if (remainingCalories < 300 && meal.calories > 400) {
       continue;

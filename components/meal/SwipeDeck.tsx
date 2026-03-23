@@ -68,7 +68,7 @@ export default function SwipeDeck({
     if (pendingSwipe && front && !isAnimating) {
       triggerSwipe(pendingSwipe);
     }
-  }, [pendingSwipe, front?.id, isAnimating, triggerSwipe]);
+  }, [pendingSwipe, front, isAnimating, triggerSwipe]);
 
   useEffect(() => {
     controls.set({ x: 0, rotate: 0, opacity: 1 });

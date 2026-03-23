@@ -37,7 +37,7 @@ export default function Step3Page() {
       sex: sex!,
       activityLevel: "moderate",
     });
-  }, [age, sex, weightKg, heightCm, goalPreset]);
+  }, [age, sex, weightKg, heightCm, goalPreset, hasStats]);
 
   const suggested = useMemo(() => {
     if (!hasStats) {
