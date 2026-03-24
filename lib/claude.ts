@@ -21,7 +21,7 @@ const mealSchema = z.object({
   fibre: z.number().int().min(0),
   prepMinutes: z.number().int().min(0),
   cookMinutes: z.number().int().min(0),
-  difficulty: z.number().int().min(1).max(3),
+  difficulty: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   tags: z.array(z.string()),
   ingredients: z.array(
     z.object({
