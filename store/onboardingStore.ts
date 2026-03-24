@@ -38,7 +38,10 @@ type OnboardingState = {
   reset: () => void;
 };
 
-const defaultState = {
+const defaultState: Omit<
+  OnboardingState,
+  "setStep1" | "setGoalPreset" | "setTargets" | "reset"
+> = {
   name: "",
   age: null,
   sex: "",
