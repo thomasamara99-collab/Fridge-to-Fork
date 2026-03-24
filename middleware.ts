@@ -1,10 +1,9 @@
-import { NextResponse } from "next/server";
-
-import { auth } from "./lib/auth";
+import { NextResponse, type NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 const publicPaths = ["/login", "/signup", "/onboarding"];
 
-export default auth(async (request) => {
+export default async function middleware(request: NextRequest) {
   const { nextUrl } = request;
   const { pathname } = nextUrl;
 
@@ -12,7 +11,12 @@ export default auth(async (request) => {
     return NextResponse.next();
   }
 
-  if (!request.auth) {
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
+  if (!token) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
@@ -31,7 +35,7 @@ export default auth(async (request) => {
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
