@@ -26,13 +26,8 @@ export default function StepLayout({
   children,
 }: StepLayoutProps) {
   const progress = Math.round((step / total) * 100);
-  const Container = onSubmit ? "form" : "div";
-
-  return (
-    <Container
-      className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 px-6 pb-24 pt-8"
-      {...(onSubmit ? { onSubmit } : {})}
-    >
+  const content = (
+    <>
       <div className="space-y-4">
         <div className="h-1 w-full rounded-full bg-surface-2">
           <div
@@ -65,6 +60,23 @@ export default function StepLayout({
           {ctaLabel}
         </button>
       </div>
-    </Container>
+    </>
+  );
+
+  if (onSubmit) {
+    return (
+      <form
+        className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 px-6 pb-24 pt-8"
+        onSubmit={onSubmit}
+      >
+        {content}
+      </form>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 px-6 pb-24 pt-8">
+      {content}
+    </div>
   );
 }
