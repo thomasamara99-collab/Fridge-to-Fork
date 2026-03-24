@@ -1,4 +1,8 @@
+"use client";
+
 import StepLayout from "../../../components/onboarding/StepLayout";
+
+export const dynamic = "force-dynamic";
 
 export default function Step5Page() {
   return (
