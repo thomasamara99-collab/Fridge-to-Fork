@@ -31,7 +31,7 @@ export default function StepLayout({
   return (
     <Container
       className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 px-6 pb-24 pt-8"
-      onSubmit={onSubmit}
+      {...(onSubmit ? { onSubmit } : {})}
     >
       <div className="space-y-4">
         <div className="h-1 w-full rounded-full bg-surface-2">
