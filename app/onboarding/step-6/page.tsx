@@ -13,108 +13,108 @@ const pantrySections = [
     label: "Proteins",
     category: "protein",
     items: [
-      "Chicken breast",
-      "Salmon",
-      "Eggs",
-      "Tuna",
-      "Ground beef",
-      "Turkey",
-      "Tofu",
-      "Greek yogurt",
-      "Shrimp",
-      "Tempeh",
-      "Cottage cheese",
-      "Canned beans",
+      { name: "Chicken breast", quantity: "300g" },
+      { name: "Salmon", quantity: "2 fillets" },
+      { name: "Eggs", quantity: "6" },
+      { name: "Tuna", quantity: "2 cans" },
+      { name: "Ground beef", quantity: "300g" },
+      { name: "Turkey", quantity: "300g" },
+      { name: "Tofu", quantity: "1 block" },
+      { name: "Greek yogurt", quantity: "500g" },
+      { name: "Shrimp", quantity: "250g" },
+      { name: "Tempeh", quantity: "1 block" },
+      { name: "Cottage cheese", quantity: "300g" },
+      { name: "Canned beans", quantity: "2 cans" },
     ],
   },
   {
     label: "Veggies",
     category: "veg",
     items: [
-      "Spinach",
-      "Broccoli",
-      "Bell pepper",
-      "Cherry tomatoes",
-      "Zucchini",
-      "Carrots",
-      "Onion",
-      "Garlic",
-      "Mushrooms",
-      "Cucumber",
-      "Kale",
-      "Green beans",
+      { name: "Spinach", quantity: "200g" },
+      { name: "Broccoli", quantity: "1 head" },
+      { name: "Bell pepper", quantity: "3" },
+      { name: "Cherry tomatoes", quantity: "250g" },
+      { name: "Zucchini", quantity: "2" },
+      { name: "Carrots", quantity: "4" },
+      { name: "Onion", quantity: "2" },
+      { name: "Garlic", quantity: "1 bulb" },
+      { name: "Mushrooms", quantity: "200g" },
+      { name: "Cucumber", quantity: "1" },
+      { name: "Kale", quantity: "150g" },
+      { name: "Green beans", quantity: "200g" },
     ],
   },
   {
     label: "Carbs",
     category: "carb",
     items: [
-      "Rice",
-      "Pasta",
-      "Quinoa",
-      "Potatoes",
-      "Tortillas",
-      "Oats",
-      "Bread",
-      "Sweet potato",
-      "Couscous",
-      "Noodles",
-      "Bagels",
-      "Wraps",
+      { name: "Rice", quantity: "500g" },
+      { name: "Pasta", quantity: "500g" },
+      { name: "Quinoa", quantity: "400g" },
+      { name: "Potatoes", quantity: "1kg" },
+      { name: "Tortillas", quantity: "8" },
+      { name: "Oats", quantity: "500g" },
+      { name: "Bread", quantity: "1 loaf" },
+      { name: "Sweet potato", quantity: "2" },
+      { name: "Couscous", quantity: "400g" },
+      { name: "Noodles", quantity: "400g" },
+      { name: "Bagels", quantity: "4" },
+      { name: "Wraps", quantity: "6" },
     ],
   },
   {
     label: "Dairy",
     category: "dairy",
     items: [
-      "Milk",
-      "Cheddar",
-      "Parmesan",
-      "Butter",
-      "Cottage cheese",
-      "Feta",
-      "Mozzarella",
-      "Cream",
-      "Yogurt",
-      "Sour cream",
-      "Cream cheese",
-      "Ricotta",
+      { name: "Milk", quantity: "1L" },
+      { name: "Cheddar", quantity: "200g" },
+      { name: "Parmesan", quantity: "100g" },
+      { name: "Butter", quantity: "250g" },
+      { name: "Cottage cheese", quantity: "300g" },
+      { name: "Feta", quantity: "200g" },
+      { name: "Mozzarella", quantity: "200g" },
+      { name: "Cream", quantity: "250ml" },
+      { name: "Yogurt", quantity: "500g" },
+      { name: "Sour cream", quantity: "200g" },
+      { name: "Cream cheese", quantity: "200g" },
+      { name: "Ricotta", quantity: "250g" },
     ],
   },
   {
     label: "Pantry",
     category: "pantry",
     items: [
-      "Olive oil",
-      "Soy sauce",
-      "Tomato paste",
-      "Canned beans",
-      "Chickpeas",
-      "Peanut butter",
-      "Hot sauce",
-      "Honey",
-      "Coconut milk",
-      "Stock cubes",
-      "Mustard",
-      "Vinegar",
+      { name: "Olive oil", quantity: "500ml" },
+      { name: "Soy sauce", quantity: "250ml" },
+      { name: "Tomato paste", quantity: "1 tube" },
+      { name: "Canned beans", quantity: "2 cans" },
+      { name: "Chickpeas", quantity: "2 cans" },
+      { name: "Peanut butter", quantity: "1 jar" },
+      { name: "Hot sauce", quantity: "1 bottle" },
+      { name: "Honey", quantity: "1 jar" },
+      { name: "Coconut milk", quantity: "2 cans" },
+      { name: "Stock cubes", quantity: "1 pack" },
+      { name: "Mustard", quantity: "1 jar" },
+      { name: "Vinegar", quantity: "1 bottle" },
     ],
   },
   {
     label: "Fruits",
     category: "fruit",
     items: [
-      "Banana",
-      "Apple",
-      "Lemon",
-      "Lime",
-      "Berries",
-      "Avocado",
-      "Orange",
-      "Grapes",
-      "Mango",
-      "Pineapple",
-      "Strawberries",
-      "Blueberries",
+      { name: "Banana", quantity: "6" },
+      { name: "Apple", quantity: "6" },
+      { name: "Lemon", quantity: "3" },
+      { name: "Lime", quantity: "3" },
+      { name: "Berries", quantity: "250g" },
+      { name: "Avocado", quantity: "3" },
+      { name: "Orange", quantity: "6" },
+      { name: "Grapes", quantity: "500g" },
+      { name: "Mango", quantity: "2" },
+      { name: "Pineapple", quantity: "1" },
+      { name: "Strawberries", quantity: "250g" },
+      { name: "Blueberries", quantity: "250g" },
     ],
   },
 ] as const;
@@ -154,7 +154,11 @@ export default function Step6Page() {
 
   const searchValue = search.trim().toLowerCase();
 
-  const toggleItem = (nameValue: string, category: string) => {
+  const toggleItem = (
+    nameValue: string,
+    category: string,
+    defaultQuantity: string,
+  ) => {
     setSelectedItems((prev) => {
       const exists = prev.some(
         (item) => item.name.toLowerCase() === nameValue.toLowerCase(),
@@ -164,7 +168,7 @@ export default function Step6Page() {
           (item) => item.name.toLowerCase() !== nameValue.toLowerCase(),
         );
       }
-      return [...prev, { name: nameValue, category, quantity: "" }];
+      return [...prev, { name: nameValue, category, quantity: defaultQuantity }];
     });
   };
 
@@ -192,7 +196,7 @@ export default function Step6Page() {
   const addCustomItem = () => {
     const value = customItem.trim();
     if (!value) return;
-    toggleItem(value, "other");
+    toggleItem(value, "other", "1");
     setCustomItem("");
   };
 
@@ -313,20 +317,22 @@ export default function Step6Page() {
                 {section.items.map((item) => {
                   const active = selectedItems.some(
                     (selected) =>
-                      selected.name.toLowerCase() === item.toLowerCase(),
+                      selected.name.toLowerCase() === item.name.toLowerCase(),
                   );
                   return (
                     <button
-                      key={item}
+                      key={item.name}
                       type="button"
-                      onClick={() => toggleItem(item, section.category)}
+                      onClick={() =>
+                        toggleItem(item.name, section.category, item.quantity)
+                      }
                       className={`rounded-full border px-3 py-1.5 text-xs ${
                         active
                           ? "border-accent bg-accent-light text-accent-text"
                           : "border-border bg-surface text-text-secondary"
                       }`}
                     >
-                      {item}
+                      {item.name}
                     </button>
                   );
                 })}

@@ -6,6 +6,25 @@ import { z } from "zod";
 
 import { prisma } from "./prisma";
 
+const resolveAuthUrl = () => {
+  const candidate =
+    process.env.NEXTAUTH_URL ??
+    process.env.AUTH_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined);
+
+  if (!candidate) return undefined;
+  if (candidate.startsWith("http://") || candidate.startsWith("https://")) {
+    return candidate;
+  }
+  return `https://${candidate}`;
+};
+
+const resolvedAuthUrl = resolveAuthUrl();
+if (resolvedAuthUrl) {
+  process.env.NEXTAUTH_URL = resolvedAuthUrl;
+  process.env.AUTH_URL = resolvedAuthUrl;
+}
+
 const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
