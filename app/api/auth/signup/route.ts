@@ -18,7 +18,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid signup data." }, { status: 400 });
   }
 
-  const email = parsed.data.email.toLowerCase();
+  const email = parsed.data.email.trim().toLowerCase();
+  const name = parsed.data.name.trim();
 
   const existing = await prisma.user.findUnique({
     where: { email },
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
     data: {
       email,
       passwordHash,
-      name: parsed.data.name,
+      name,
     },
   });
 

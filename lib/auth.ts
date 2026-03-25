@@ -29,8 +29,9 @@ export const authConfig: NextAuthConfig = {
         const parsed = credentialsSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
+        const email = parsed.data.email.trim().toLowerCase();
         const user = await prisma.user.findUnique({
-          where: { email: parsed.data.email.toLowerCase() },
+          where: { email },
         });
 
         if (!user) return null;

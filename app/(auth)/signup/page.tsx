@@ -19,7 +19,11 @@ export default function SignupPage() {
     const response = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({
+        name,
+        email: email.trim().toLowerCase(),
+        password,
+      }),
     });
 
     if (!response.ok) {
@@ -32,7 +36,7 @@ export default function SignupPage() {
     }
 
     const result = await signIn("credentials", {
-      email,
+      email: email.trim().toLowerCase(),
       password,
       redirect: false,
       callbackUrl: "/onboarding/step-1",

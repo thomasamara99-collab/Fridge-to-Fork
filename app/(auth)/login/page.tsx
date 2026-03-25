@@ -16,7 +16,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     const result = await signIn("credentials", {
-      email,
+      email: email.trim().toLowerCase(),
       password,
       redirect: false,
       callbackUrl: "/swipe",
