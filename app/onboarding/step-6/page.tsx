@@ -21,6 +21,10 @@ const pantrySections = [
       "Turkey",
       "Tofu",
       "Greek yogurt",
+      "Shrimp",
+      "Tempeh",
+      "Cottage cheese",
+      "Canned beans",
     ],
   },
   {
@@ -35,6 +39,10 @@ const pantrySections = [
       "Carrots",
       "Onion",
       "Garlic",
+      "Mushrooms",
+      "Cucumber",
+      "Kale",
+      "Green beans",
     ],
   },
   {
@@ -49,6 +57,10 @@ const pantrySections = [
       "Oats",
       "Bread",
       "Sweet potato",
+      "Couscous",
+      "Noodles",
+      "Bagels",
+      "Wraps",
     ],
   },
   {
@@ -63,6 +75,10 @@ const pantrySections = [
       "Feta",
       "Mozzarella",
       "Cream",
+      "Yogurt",
+      "Sour cream",
+      "Cream cheese",
+      "Ricotta",
     ],
   },
   {
@@ -77,6 +93,10 @@ const pantrySections = [
       "Peanut butter",
       "Hot sauce",
       "Honey",
+      "Coconut milk",
+      "Stock cubes",
+      "Mustard",
+      "Vinegar",
     ],
   },
   {
@@ -91,6 +111,10 @@ const pantrySections = [
       "Avocado",
       "Orange",
       "Grapes",
+      "Mango",
+      "Pineapple",
+      "Strawberries",
+      "Blueberries",
     ],
   },
 ] as const;
@@ -140,8 +164,18 @@ export default function Step6Page() {
           (item) => item.name.toLowerCase() !== nameValue.toLowerCase(),
         );
       }
-      return [...prev, { name: nameValue, category }];
+      return [...prev, { name: nameValue, category, quantity: "" }];
     });
+  };
+
+  const updateQuantity = (nameValue: string, quantity: string) => {
+    setSelectedItems((prev) =>
+      prev.map((item) =>
+        item.name.toLowerCase() === nameValue.toLowerCase()
+          ? { ...item, quantity }
+          : item,
+      ),
+    );
   };
 
   const filteredSections = useMemo(
@@ -213,19 +247,20 @@ export default function Step6Page() {
         throw new Error("Unable to save profile.");
       }
 
-      if (selectedItems.length) {
-        const fridgeRequests = selectedItems.map((item) =>
-          fetch("/api/fridge", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: item.name,
-              category: item.category,
+        if (selectedItems.length) {
+          const fridgeRequests = selectedItems.map((item) =>
+            fetch("/api/fridge", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: item.name,
+                category: item.category,
+                quantity: item.quantity || undefined,
+              }),
             }),
-          }),
-        );
-        await Promise.all(fridgeRequests);
-      }
+          );
+          await Promise.all(fridgeRequests);
+        }
 
       router.push("/onboarding/complete");
     } catch (err) {
@@ -343,6 +378,32 @@ export default function Step6Page() {
             ? `${selectedItems.length} items selected`
             : "Select a few items to personalize your matches."}
         </div>
+
+        {selectedItems.length ? (
+          <div className="rounded-card border border-border bg-surface p-4">
+            <p className="text-xs uppercase tracking-wide text-text-tertiary">
+              Selected items & quantities
+            </p>
+            <div className="mt-3 space-y-2">
+              {selectedItems.map((item) => (
+                <div
+                  key={item.name}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <span className="text-sm text-text-primary">{item.name}</span>
+                  <input
+                    value={item.quantity ?? ""}
+                    onChange={(event) =>
+                      updateQuantity(item.name, event.target.value)
+                    }
+                    placeholder="Qty"
+                    className="w-24 rounded-md border border-transparent bg-surface-2 px-3 py-2 text-xs text-text-primary outline-none focus:border-accent focus:bg-white"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {error ? (
           <p className="text-sm text-accent-text">{error}</p>

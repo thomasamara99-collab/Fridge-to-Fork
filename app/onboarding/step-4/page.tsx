@@ -25,7 +25,6 @@ export default function Step4Page() {
     dietaryFilters,
     dislikedIngredients,
     cookingSkill,
-    budget,
     setStep4,
   } = useOnboardingStore();
 
@@ -34,7 +33,6 @@ export default function Step4Page() {
     dislikedIngredients.join(", "),
   );
   const [skill, setSkill] = useState(cookingSkill);
-  const [budgetChoice, setBudgetChoice] = useState(budget);
 
   const hasRestrictions = selectedFilters.length > 0;
 
@@ -58,7 +56,7 @@ export default function Step4Page() {
       dietaryFilters: selectedFilters,
       dislikedIngredients: parsedDislikes,
       cookingSkill: skill,
-      budget: budgetChoice,
+      budget: "medium",
     });
     router.push("/onboarding/step-5");
   };
@@ -127,49 +125,34 @@ export default function Step4Page() {
           ) : null}
         </label>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-text-tertiary">
-              Cooking skill
-            </p>
-            <div className="mt-2 grid grid-cols-3 gap-2 rounded-md bg-surface-2 p-1">
-              {(["beginner", "intermediate", "advanced"] as const).map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setSkill(item)}
-                  className={`rounded-md px-2 py-2 text-xs font-medium capitalize ${
-                    skill === item
-                      ? "bg-white text-text-primary shadow"
-                      : "text-text-secondary"
-                  }`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
+        <div>
+          <p className="text-xs uppercase tracking-wide text-text-tertiary">
+            Cooking skill
+          </p>
+          <div className="mt-2 grid grid-cols-3 gap-2 rounded-md bg-surface-2 p-1">
+            {([
+              { value: "beginner", label: "New" },
+              { value: "intermediate", label: "Confident" },
+              { value: "advanced", label: "Advanced" },
+            ] as const).map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => setSkill(item.value)}
+                className={`rounded-md px-2 py-2 text-[11px] font-semibold ${
+                  skill === item.value
+                    ? "bg-white text-text-primary shadow"
+                    : "text-text-secondary"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
           </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-text-tertiary">
-              Budget
-            </p>
-            <div className="mt-2 grid grid-cols-3 gap-2 rounded-md bg-surface-2 p-1">
-              {(["low", "medium", "high"] as const).map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setBudgetChoice(item)}
-                  className={`rounded-md px-2 py-2 text-xs font-medium capitalize ${
-                    budgetChoice === item
-                      ? "bg-white text-text-primary shadow"
-                      : "text-text-secondary"
-                  }`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
+          <p className="mt-2 text-xs text-text-tertiary">
+            Confident means you can follow recipes and cook a few staples without
+            stress.
+          </p>
         </div>
       </div>
     </StepLayout>

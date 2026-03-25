@@ -16,6 +16,7 @@ type DietaryFilter =
 type FridgeItemInput = {
   name: string;
   category: string;
+  quantity?: string;
 };
 
 type OnboardingState = {

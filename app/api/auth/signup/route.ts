@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import { prisma } from "../../../../lib/prisma";
 
+export const runtime = "nodejs";
+
 const signupSchema = z.object({
   name: z.string().min(1).max(80),
   email: z.string().email(),
