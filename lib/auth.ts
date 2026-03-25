@@ -13,6 +13,7 @@ const credentialsSchema = z.object({
 
 export const authConfig: NextAuthConfig = {
   secret: process.env.NEXTAUTH_SECRET,
+  trustHost: true,
   session: {
     strategy: "jwt",
   },
@@ -31,8 +32,13 @@ export const authConfig: NextAuthConfig = {
         if (!parsed.success) return null;
 
         const email = parsed.data.email.trim().toLowerCase();
-        const user = await prisma.user.findUnique({
-          where: { email },
+        const user = await prisma.user.findFirst({
+          where: {
+            email: {
+              equals: email,
+              mode: "insensitive",
+            },
+          },
         });
 
         if (!user) return null;

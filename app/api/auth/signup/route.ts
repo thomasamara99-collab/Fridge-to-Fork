@@ -23,8 +23,13 @@ export async function POST(request: Request) {
   const email = parsed.data.email.trim().toLowerCase();
   const name = parsed.data.name.trim();
 
-  const existing = await prisma.user.findUnique({
-    where: { email },
+  const existing = await prisma.user.findFirst({
+    where: {
+      email: {
+        equals: email,
+        mode: "insensitive",
+      },
+    },
   });
 
   if (existing) {
