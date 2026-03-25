@@ -187,7 +187,9 @@ export default function Step6Page() {
       pantrySections.map((section) => ({
         ...section,
         items: section.items.filter((item) =>
-          searchValue ? item.toLowerCase().includes(searchValue) : true,
+          searchValue
+            ? item.name.toLowerCase().includes(searchValue)
+            : true,
         ),
       })),
     [searchValue],
