@@ -3,6 +3,20 @@ import { persist } from "zustand/middleware";
 
 type GoalPreset = "cut" | "maintain" | "bulk" | "";
 type GoalFinal = GoalPreset | "custom";
+type DietaryFilter =
+  | "vegetarian"
+  | "vegan"
+  | "pescatarian"
+  | "gluten-free"
+  | "dairy-free"
+  | "halal"
+  | "kosher"
+  | "nut-free";
+
+type FridgeItemInput = {
+  name: string;
+  category: string;
+};
 
 type OnboardingState = {
   name: string;
@@ -18,6 +32,14 @@ type OnboardingState = {
   targetCarbs: number | null;
   targetFat: number | null;
   calculatedTdee: number | null;
+  dietaryFilters: DietaryFilter[];
+  dislikedIngredients: string[];
+  cuisinePrefs: string[];
+  cookingSkill: "beginner" | "intermediate" | "advanced";
+  budget: "low" | "medium" | "high";
+  trainingDays: number[];
+  fridgeItems: FridgeItemInput[];
+  nextShopDate: string | null;
   setStep1: (data: {
     name: string;
     age: number;
@@ -35,6 +57,14 @@ type OnboardingState = {
     calculatedTdee: number;
     goal: GoalFinal;
   }) => void;
+  setStep4: (data: {
+    dietaryFilters: DietaryFilter[];
+    dislikedIngredients: string[];
+    cookingSkill: "beginner" | "intermediate" | "advanced";
+    budget: "low" | "medium" | "high";
+  }) => void;
+  setStep5: (days: number[]) => void;
+  setStep6: (data: { fridgeItems: FridgeItemInput[]; nextShopDate: string | null }) => void;
   reset: () => void;
 };
 
@@ -55,6 +85,14 @@ const defaultState: Omit<
   targetCarbs: null,
   targetFat: null,
   calculatedTdee: null,
+  dietaryFilters: [],
+  dislikedIngredients: [],
+  cuisinePrefs: [],
+  cookingSkill: "beginner",
+  budget: "medium",
+  trainingDays: [],
+  fridgeItems: [],
+  nextShopDate: null,
 };
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -80,6 +118,16 @@ export const useOnboardingStore = create<OnboardingState>()(
           calculatedTdee: data.calculatedTdee,
           goal: data.goal,
         }),
+      setStep4: (data) =>
+        set({
+          dietaryFilters: data.dietaryFilters,
+          dislikedIngredients: data.dislikedIngredients,
+          cookingSkill: data.cookingSkill,
+          budget: data.budget,
+        }),
+      setStep5: (days) => set({ trainingDays: days }),
+      setStep6: (data) =>
+        set({ fridgeItems: data.fridgeItems, nextShopDate: data.nextShopDate }),
       reset: () => set(defaultState),
     }),
     {
