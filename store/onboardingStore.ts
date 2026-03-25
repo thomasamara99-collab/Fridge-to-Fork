@@ -70,7 +70,7 @@ type OnboardingState = {
 
 const defaultState: Omit<
   OnboardingState,
-  "setStep1" | "setGoalPreset" | "setTargets" | "reset"
+  "setStep1" | "setGoalPreset" | "setTargets" | "setStep4" | "setStep5" | "setStep6" | "reset"
 > = {
   name: "",
   age: null,
