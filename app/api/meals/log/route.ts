@@ -83,3 +83,41 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(request: Request) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+  if (!id) {
+    return NextResponse.json({ error: "Missing id." }, { status: 400 });
+  }
+
+  const loggedMeal = await prisma.loggedMeal.findUnique({
+    where: { id },
+    include: { log: true },
+  });
+
+  if (!loggedMeal || loggedMeal.log.userId !== session.user.id) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+
+  await prisma.$transaction([
+    prisma.loggedMeal.delete({ where: { id } }),
+    prisma.dailyLog.update({
+      where: { id: loggedMeal.logId },
+      data: {
+        calories: { decrement: loggedMeal.calories },
+        protein: { decrement: loggedMeal.protein },
+        carbs: { decrement: loggedMeal.carbs },
+        fat: { decrement: loggedMeal.fat },
+      },
+    }),
+  ]);
+
+  return NextResponse.json({ ok: true });
+}

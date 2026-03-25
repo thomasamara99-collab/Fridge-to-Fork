@@ -6,6 +6,8 @@ type MacroRingProps = {
   target: number;
   color: string;
   unit: string;
+  size?: number;
+  stroke?: number;
 };
 
 export default function MacroRing({
@@ -14,14 +16,16 @@ export default function MacroRing({
   target,
   color,
   unit,
+  size = 88,
+  stroke = 8,
 }: MacroRingProps) {
-  const size = 88;
-  const stroke = 8;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const progress = target > 0 ? Math.min(value / target, 1) : 0;
   const dash = circumference * progress;
   const remaining = Math.max(0, target - value);
+  const valueClass = size >= 120 ? "text-3xl" : "text-xl";
+  const unitClass = size >= 120 ? "text-xs" : "text-[10px]";
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -47,10 +51,12 @@ export default function MacroRing({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-display text-xl text-text-primary">
+          <span className={`font-display ${valueClass} text-text-primary`}>
             {remaining}
           </span>
-          <span className="text-[10px] uppercase tracking-wide text-text-tertiary">
+          <span
+            className={`${unitClass} uppercase tracking-wide text-text-tertiary`}
+          >
             {unit}
           </span>
         </div>
