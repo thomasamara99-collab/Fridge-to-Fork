@@ -8,33 +8,6 @@ import { z } from "zod";
 
 import PhotoUpload from "../../../../components/meal/PhotoUpload";
 
-const categoryOptions = [
-  { value: "breakfast", label: "Breakfast" },
-  { value: "protein", label: "High protein" },
-  { value: "veggie", label: "Vegetarian" },
-  { value: "carbs", label: "Carb focused" },
-  { value: "light", label: "Light" },
-  { value: "snack", label: "Snack" },
-] as const;
-
-const colorOptions = [
-  { value: "amber", label: "Amber", swatch: "bg-yellow-light" },
-  { value: "coral", label: "Coral", swatch: "bg-accent-light" },
-  { value: "green", label: "Green", swatch: "bg-green-light" },
-  { value: "teal", label: "Teal", swatch: "bg-[#E6F5F4]" },
-  { value: "blue", label: "Blue", swatch: "bg-[#EAF1FB]" },
-] as const;
-
-const ingredientCategories = [
-  "protein",
-  "veg",
-  "carb",
-  "dairy",
-  "pantry",
-  "fruit",
-  "other",
-] as const;
-
 const tagOptions = [
   "budget",
   "high protein",
@@ -63,22 +36,11 @@ const allergenOptions = [
 const ingredientSchema = z.object({
   name: z.string().min(1, "Required"),
   amount: z.string().min(1, "Required"),
-  category: z.string().min(1, "Required"),
 });
 
 const schema = z.object({
   name: z.string().min(1, "Required"),
   description: z.string().max(80, "Max 80 characters").optional(),
-  emoji: z.string().min(1, "Required").max(4),
-  category: z.enum([
-    "breakfast",
-    "protein",
-    "veggie",
-    "carbs",
-    "light",
-    "snack",
-  ]),
-  colorTheme: z.enum(["amber", "coral", "green", "teal", "blue"]),
   calories: z.number().min(50, "Minimum 50 kcal"),
   protein: z.number().min(0),
   carbs: z.number().min(0),
@@ -104,6 +66,34 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+type MealCategory = "breakfast" | "protein" | "veggie" | "carbs" | "light" | "snack";
+type MealTheme = "amber" | "coral" | "green" | "teal" | "blue";
+
+const deriveCategory = (tags: string[]): MealCategory => {
+  if (tags.includes("breakfast")) return "breakfast";
+  if (tags.includes("vegetarian") || tags.includes("vegan")) return "veggie";
+  if (tags.includes("high protein")) return "protein";
+  if (tags.includes("pre-workout")) return "carbs";
+  return "light";
+};
+
+const deriveTheme = (category: MealCategory): MealTheme => {
+  switch (category) {
+    case "breakfast":
+      return "amber";
+    case "protein":
+      return "coral";
+    case "veggie":
+      return "green";
+    case "carbs":
+      return "teal";
+    case "snack":
+      return "blue";
+    default:
+      return "amber";
+  }
+};
+
 export default function AddMealPage() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -123,9 +113,6 @@ export default function AddMealPage() {
     defaultValues: {
       name: "",
       description: "",
-      emoji: "???",
-      category: "protein",
-      colorTheme: "amber",
       calories: 450,
       protein: 35,
       carbs: 40,
@@ -136,7 +123,7 @@ export default function AddMealPage() {
       cookMinutes: 15,
       difficulty: 2,
       tags: [],
-      ingredients: [{ name: "", amount: "", category: "protein" }],
+      ingredients: [{ name: "", amount: "" }],
       steps: [{ value: "" }],
       tools: [{ value: "" }],
       allergens: [],
@@ -171,7 +158,6 @@ export default function AddMealPage() {
   const selectedTags = watch("tags");
   const selectedAllergens = watch("allergens");
   const selectedDifficulty = watch("difficulty");
-  const selectedTheme = watch("colorTheme");
   const calories = watch("calories") ?? 0;
   const protein = watch("protein") ?? 0;
   const carbs = watch("carbs") ?? 0;
@@ -235,9 +221,12 @@ export default function AddMealPage() {
     const formData = new FormData();
     formData.append("name", data.name);
     if (data.description) formData.append("description", data.description);
-    formData.append("emoji", data.emoji);
-    formData.append("category", data.category);
-    formData.append("colorTheme", data.colorTheme);
+    const inferredCategory = deriveCategory(data.tags);
+    const inferredTheme = deriveTheme(inferredCategory);
+
+    formData.append("emoji", "🍽️");
+    formData.append("category", inferredCategory);
+    formData.append("colorTheme", inferredTheme);
     formData.append("calories", String(data.calories));
     formData.append("protein", String(data.protein));
     formData.append("carbs", String(data.carbs));
@@ -337,59 +326,9 @@ export default function AddMealPage() {
               ) : null}
             </label>
 
-            <div className="grid grid-cols-2 gap-4">
-              <label className="block">
-                <span className="text-xs uppercase tracking-wide text-text-tertiary">
-                  Emoji
-                </span>
-                <input
-                  {...register("emoji")}
-                  className="mt-2 w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-lg text-text-primary outline-none focus:border-accent focus:bg-white"
-                />
-              </label>
-              <label className="block">
-                <span className="text-xs uppercase tracking-wide text-text-tertiary">
-                  Category
-                </span>
-                <select
-                  {...register("category")}
-                  className="mt-2 w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
-                >
-                  {categoryOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div>
-              <span className="text-xs uppercase tracking-wide text-text-tertiary">
-                Color theme
-              </span>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {colorOptions.map((option) => {
-                  const active = selectedTheme === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setValue("colorTheme", option.value)}
-                      className={`flex items-center gap-2 rounded-full border px-3 py-2 text-xs ${
-                        active
-                          ? "border-accent text-text-primary"
-                          : "border-border text-text-secondary"
-                      }`}
-                    >
-                      <span
-                        className={`h-4 w-4 rounded-full border border-border ${option.swatch}`}
-                      />
-                      {option.label}
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="rounded-md bg-surface-2 px-4 py-3 text-xs text-text-secondary">
+              Category, emoji, and color theme are assigned automatically to keep
+              creation fast.
             </div>
           </div>
         </section>
@@ -646,9 +585,7 @@ export default function AddMealPage() {
             </p>
             <button
               type="button"
-              onClick={() =>
-                appendIngredient({ name: "", amount: "", category: "other" })
-              }
+              onClick={() => appendIngredient({ name: "", amount: "" })}
               className="rounded-full border border-border px-3 py-1 text-xs text-text-secondary"
             >
               Add row
@@ -656,10 +593,7 @@ export default function AddMealPage() {
           </div>
           <div className="mt-4 space-y-3">
             {ingredientFields.map((field, index) => (
-              <div
-                key={field.id}
-                className="grid grid-cols-[1.2fr_1fr_0.9fr_auto] items-center gap-2"
-              >
+              <div key={field.id} className="grid grid-cols-[1.2fr_1fr_auto] items-center gap-2">
                 <input
                   {...register(`ingredients.${index}.name`)}
                   placeholder="Ingredient"
@@ -670,16 +604,6 @@ export default function AddMealPage() {
                   placeholder="Amount"
                   className="rounded-md border border-transparent bg-surface-2 px-3 py-2 text-xs text-text-primary outline-none focus:border-accent focus:bg-white"
                 />
-                <select
-                  {...register(`ingredients.${index}.category`)}
-                  className="rounded-md border border-transparent bg-surface-2 px-3 py-2 text-xs text-text-primary outline-none focus:border-accent focus:bg-white"
-                >
-                  {ingredientCategories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
                 <button
                   type="button"
                   onClick={() => removeIngredient(index)}

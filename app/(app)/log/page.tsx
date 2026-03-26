@@ -24,6 +24,13 @@ export default function LogPage() {
   const { data: log, isLoading } = useTodayLog();
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [quickName, setQuickName] = useState("");
+  const [quickCalories, setQuickCalories] = useState("");
+  const [quickProtein, setQuickProtein] = useState("");
+  const [quickCarbs, setQuickCarbs] = useState("");
+  const [quickFat, setQuickFat] = useState("");
+  const [quickError, setQuickError] = useState<string | null>(null);
+  const [quickSubmitting, setQuickSubmitting] = useState(false);
 
   const targets = profile ?? {
     targetCalories: 0,
@@ -45,6 +52,90 @@ export default function LogPage() {
     () => getRemainingMessage(remainingCalories),
     [remainingCalories],
   );
+
+  const toNumber = (value: string) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+  };
+
+  const submitQuickAdd = async () => {
+    setQuickError(null);
+    if (quickSubmitting) return;
+
+    const calories = toNumber(quickCalories);
+    const protein = toNumber(quickProtein);
+    const carbs = toNumber(quickCarbs);
+    const fat = toNumber(quickFat);
+    const total = calories + protein + carbs + fat;
+
+    if (total <= 0) {
+      setQuickError("Add at least one macro or calorie value.");
+      return;
+    }
+
+    const mealName = quickName.trim() || "Quick add";
+    const tempId = `temp-${Date.now()}`;
+
+    setQuickSubmitting(true);
+    queryClient.setQueryData<TodayLog>(["log", "today"], (prev) => {
+      const base = prev ?? {
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        meals: [],
+      };
+      return {
+        ...base,
+        calories: base.calories + calories,
+        protein: base.protein + protein,
+        carbs: base.carbs + carbs,
+        fat: base.fat + fat,
+        meals: [
+          {
+            id: tempId,
+            mealId: null,
+            mealName,
+            calories,
+            protein,
+            carbs,
+            fat,
+            loggedAt: new Date().toISOString(),
+          },
+          ...base.meals,
+        ],
+      };
+    });
+
+    try {
+      const response = await fetch("/api/meals/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mealName,
+          calories,
+          protein,
+          carbs,
+          fat,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to log meal.");
+      }
+
+      setQuickName("");
+      setQuickCalories("");
+      setQuickProtein("");
+      setQuickCarbs("");
+      setQuickFat("");
+    } catch (error) {
+      setQuickError("We couldn't log that entry. Please try again.");
+    } finally {
+      setQuickSubmitting(false);
+      queryClient.invalidateQueries({ queryKey: ["log", "today"] });
+    }
+  };
 
   const deleteMeal = async (meal: LoggedMeal) => {
     if (!meal.id) return;
@@ -108,6 +199,68 @@ export default function LogPage() {
               unit="g"
             />
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-card border border-border bg-surface p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-text-tertiary">
+              Quick add
+            </p>
+            <p className="text-sm text-text-secondary">
+              Log something you already ate.
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 space-y-3">
+          <input
+            value={quickName}
+            onChange={(event) => setQuickName(event.target.value)}
+            placeholder="Meal name (optional)"
+            className="w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              value={quickCalories}
+              onChange={(event) => setQuickCalories(event.target.value)}
+              placeholder="Calories"
+              inputMode="numeric"
+              className="w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+            />
+            <input
+              value={quickProtein}
+              onChange={(event) => setQuickProtein(event.target.value)}
+              placeholder="Protein (g)"
+              inputMode="numeric"
+              className="w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+            />
+            <input
+              value={quickCarbs}
+              onChange={(event) => setQuickCarbs(event.target.value)}
+              placeholder="Carbs (g)"
+              inputMode="numeric"
+              className="w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+            />
+            <input
+              value={quickFat}
+              onChange={(event) => setQuickFat(event.target.value)}
+              placeholder="Fat (g)"
+              inputMode="numeric"
+              className="w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+            />
+          </div>
+          {quickError ? (
+            <p className="text-xs text-accent-text">{quickError}</p>
+          ) : null}
+          <button
+            type="button"
+            onClick={submitQuickAdd}
+            disabled={quickSubmitting}
+            className="w-full rounded-md bg-accent px-4 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {quickSubmitting ? "Logging..." : "Add to log"}
+          </button>
         </div>
       </section>
 

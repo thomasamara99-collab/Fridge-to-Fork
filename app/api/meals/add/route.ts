@@ -20,16 +20,15 @@ const parseNumber = (value: FormDataEntryValue | null) => {
 const mealSchema = z.object({
   name: z.string().min(1).max(80),
   description: z.string().max(120).optional(),
-  emoji: z.string().min(1).max(4),
-  category: z.enum([
-    "breakfast",
-    "protein",
-    "veggie",
-    "carbs",
-    "light",
-    "snack",
-  ]),
-  colorTheme: z.enum(["amber", "coral", "green", "teal", "blue"]),
+  emoji: z.string().min(1).max(4).optional().default("🍽️"),
+  category: z
+    .enum(["breakfast", "protein", "veggie", "carbs", "light", "snack"])
+    .optional()
+    .default("light"),
+  colorTheme: z
+    .enum(["amber", "coral", "green", "teal", "blue"])
+    .optional()
+    .default("amber"),
   calories: z.number().int().min(50),
   protein: z.number().int().min(0),
   carbs: z.number().int().min(0),
@@ -44,7 +43,7 @@ const mealSchema = z.object({
     z.object({
       name: z.string(),
       amount: z.string(),
-      category: z.string(),
+      category: z.string().optional().default("other"),
     }),
   ),
   steps: z.array(z.string()),
@@ -71,9 +70,9 @@ export async function POST(request: Request) {
   const parsed = mealSchema.safeParse({
     name: formData.get("name"),
     description: formData.get("description") ?? undefined,
-    emoji: formData.get("emoji") ?? "🍽️",
-    category: formData.get("category"),
-    colorTheme: formData.get("colorTheme"),
+    emoji: formData.get("emoji") ?? undefined,
+    category: formData.get("category") ?? undefined,
+    colorTheme: formData.get("colorTheme") ?? undefined,
     calories: parseNumber(formData.get("calories")),
     protein: parseNumber(formData.get("protein")),
     carbs: parseNumber(formData.get("carbs")),
@@ -101,6 +100,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid meal data." }, { status: 400 });
   }
 
+  const normalizedIngredients = parsed.data.ingredients.map((item) => ({
+    ...item,
+    category: item.category ?? "other",
+  }));
+
   const meal = await prisma.meal.create({
     data: {
       name: parsed.data.name,
@@ -119,7 +123,7 @@ export async function POST(request: Request) {
       cookMinutes: parsed.data.cookMinutes,
       difficulty: parsed.data.difficulty,
       tags: JSON.stringify(parsed.data.tags),
-      ingredients: JSON.stringify(parsed.data.ingredients),
+      ingredients: JSON.stringify(normalizedIngredients),
       steps: JSON.stringify(parsed.data.steps),
       tools: JSON.stringify(parsed.data.tools),
       allergens: JSON.stringify(parsed.data.allergens),
