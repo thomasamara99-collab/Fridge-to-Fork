@@ -48,6 +48,18 @@ const tagOptions = [
   "dairy-free",
 ] as const;
 
+const allergenOptions = [
+  "gluten",
+  "dairy",
+  "nuts",
+  "peanuts",
+  "soy",
+  "eggs",
+  "fish",
+  "shellfish",
+  "sesame",
+] as const;
+
 const ingredientSchema = z.object({
   name: z.string().min(1, "Required"),
   amount: z.string().min(1, "Required"),
@@ -72,12 +84,15 @@ const schema = z.object({
   carbs: z.number().min(0),
   fat: z.number().min(0),
   fibre: z.number().min(0),
+  satiating: z.number().min(1).max(5),
   prepMinutes: z.number().min(0),
   cookMinutes: z.number().min(0),
   difficulty: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   tags: z.array(z.string()),
   ingredients: z.array(ingredientSchema).min(1),
   steps: z.array(z.object({ value: z.string().min(1, "Required") })).min(1),
+  tools: z.array(z.object({ value: z.string().min(1, "Required") })).min(1),
+  allergens: z.array(z.string()),
   isVegetarian: z.boolean(),
   isVegan: z.boolean(),
   isGlutenFree: z.boolean(),
@@ -92,8 +107,8 @@ type FormValues = z.infer<typeof schema>;
 export default function AddMealPage() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
 
   const {
@@ -108,7 +123,7 @@ export default function AddMealPage() {
     defaultValues: {
       name: "",
       description: "",
-      emoji: "🍽️",
+      emoji: "???",
       category: "protein",
       colorTheme: "amber",
       calories: 450,
@@ -116,12 +131,15 @@ export default function AddMealPage() {
       carbs: 40,
       fat: 15,
       fibre: 4,
+      satiating: 3,
       prepMinutes: 10,
       cookMinutes: 15,
       difficulty: 2,
       tags: [],
       ingredients: [{ name: "", amount: "", category: "protein" }],
       steps: [{ value: "" }],
+      tools: [{ value: "" }],
+      allergens: [],
       isVegetarian: false,
       isVegan: false,
       isGlutenFree: false,
@@ -144,7 +162,14 @@ export default function AddMealPage() {
       name: "steps",
     });
 
+  const { fields: toolFields, append: appendTool, remove: removeTool } =
+    useFieldArray({
+      control,
+      name: "tools",
+    });
+
   const selectedTags = watch("tags");
+  const selectedAllergens = watch("allergens");
   const selectedDifficulty = watch("difficulty");
   const selectedTheme = watch("colorTheme");
   const calories = watch("calories") ?? 0;
@@ -166,27 +191,42 @@ export default function AddMealPage() {
     setValue("tags", next, { shouldDirty: true });
   };
 
-  const handleFileChange = (file: File | null) => {
+  const toggleAllergen = (allergen: string) => {
+    const next = selectedAllergens.includes(allergen)
+      ? selectedAllergens.filter((item) => item !== allergen)
+      : [...selectedAllergens, allergen];
+    setValue("allergens", next, { shouldDirty: true });
+  };
+
+  const handleFileChange = (files: File[]) => {
     setPhotoError(null);
-    setPhotoFile(file);
+    setPhotoFiles([]);
+    setPhotoPreviews([]);
 
-    if (!file) {
-      setPhotoPreview(null);
+    if (!files.length) {
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      setPhotoError("Please upload an image file.");
-      setPhotoFile(null);
-      setPhotoPreview(null);
+    const images = files.filter((file) => file.type.startsWith("image/"));
+    if (!images.length) {
+      setPhotoError("Please upload image files only.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPhotoPreview(typeof reader.result === "string" ? reader.result : null);
-    };
-    reader.readAsDataURL(file);
+    setPhotoFiles(images);
+    void Promise.all(
+      images.map(
+        (file) =>
+          new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () =>
+              resolve(typeof reader.result === "string" ? reader.result : "");
+            reader.readAsDataURL(file);
+          }),
+      ),
+    ).then((previews) => {
+      setPhotoPreviews(previews.filter(Boolean));
+    });
   };
 
   const onSubmit = handleSubmit(async (data) => {
@@ -203,6 +243,7 @@ export default function AddMealPage() {
     formData.append("carbs", String(data.carbs));
     formData.append("fat", String(data.fat));
     formData.append("fibre", String(data.fibre));
+    formData.append("satiating", String(data.satiating));
     formData.append("prepMinutes", String(data.prepMinutes));
     formData.append("cookMinutes", String(data.cookMinutes));
     formData.append("difficulty", String(data.difficulty));
@@ -212,6 +253,11 @@ export default function AddMealPage() {
       "steps",
       JSON.stringify(data.steps.map((step) => step.value)),
     );
+    formData.append(
+      "tools",
+      JSON.stringify(data.tools.map((tool) => tool.value)),
+    );
+    formData.append("allergens", JSON.stringify(data.allergens));
     formData.append("isVegetarian", String(data.isVegetarian));
     formData.append("isVegan", String(data.isVegan));
     formData.append("isGlutenFree", String(data.isGlutenFree));
@@ -220,8 +266,10 @@ export default function AddMealPage() {
     formData.append("isKosher", String(data.isKosher));
     formData.append("isNutFree", String(data.isNutFree));
 
-    if (photoFile) {
-      formData.append("photo", photoFile);
+    if (photoFiles.length) {
+      photoFiles.forEach((file) => {
+        formData.append("photos", file);
+      });
     }
 
     const response = await fetch("/api/meals/add", {
@@ -475,6 +523,30 @@ export default function AddMealPage() {
 
         <section className="rounded-card border border-border bg-surface p-4">
           <p className="text-xs uppercase tracking-wide text-text-tertiary">
+            How satiating is it?
+          </p>
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center justify-between text-sm text-text-secondary">
+              <span>Light</span>
+              <span>Very filling</span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={5}
+              {...register("satiating", { valueAsNumber: true })}
+              className="w-full accent-[var(--accent)]"
+            />
+            {errors.satiating ? (
+              <p className="text-xs text-accent-text">
+                {errors.satiating.message}
+              </p>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="rounded-card border border-border bg-surface p-4">
+          <p className="text-xs uppercase tracking-wide text-text-tertiary">
             Dietary flags
           </p>
           <div className="mt-3 grid grid-cols-2 gap-3 text-sm text-text-secondary">
@@ -499,6 +571,71 @@ export default function AddMealPage() {
                 {flag.label}
               </label>
             ))}
+          </div>
+        </section>
+
+        <section className="rounded-card border border-border bg-surface p-4">
+          <p className="text-xs uppercase tracking-wide text-text-tertiary">
+            Allergen labels
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {allergenOptions.map((allergen) => {
+              const active = selectedAllergens.includes(allergen);
+              return (
+                <button
+                  key={allergen}
+                  type="button"
+                  onClick={() => toggleAllergen(allergen)}
+                  className={`rounded-full border px-3 py-1 text-xs ${
+                    active
+                      ? "border-accent bg-accent-light text-accent-text"
+                      : "border-border bg-surface text-text-secondary"
+                  }`}
+                >
+                  {allergen}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="rounded-card border border-border bg-surface p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-wide text-text-tertiary">
+              Tools needed
+            </p>
+            <button
+              type="button"
+              onClick={() => appendTool({ value: "" })}
+              className="rounded-full border border-border px-3 py-1 text-xs text-text-secondary"
+            >
+              Add tool
+            </button>
+          </div>
+          <div className="mt-4 space-y-3">
+            {toolFields.map((field, index) => (
+              <div key={field.id} className="flex items-center gap-2">
+                <input
+                  {...register(`tools.${index}.value`)}
+                  placeholder="e.g. Non-stick pan"
+                  className="w-full rounded-md border border-transparent bg-surface-2 px-3 py-2 text-xs text-text-primary outline-none focus:border-accent focus:bg-white"
+                />
+                {toolFields.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => removeTool(index)}
+                    className="text-xs text-text-tertiary"
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </div>
+            ))}
+            {errors.tools ? (
+              <p className="text-xs text-accent-text">
+                Add at least one tool.
+              </p>
+            ) : null}
           </div>
         </section>
 
@@ -627,8 +764,8 @@ export default function AddMealPage() {
         </section>
 
         <PhotoUpload
-          previewUrl={photoPreview}
-          onFileChange={handleFileChange}
+          previewUrls={photoPreviews}
+          onFilesChange={handleFileChange}
           error={photoError ?? undefined}
         />
 

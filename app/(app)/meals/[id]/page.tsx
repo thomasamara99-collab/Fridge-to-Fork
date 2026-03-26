@@ -58,6 +58,30 @@ export default async function MealDetailPage({
     }
   })();
 
+  const tools = (() => {
+    try {
+      return JSON.parse(meal.tools) as string[];
+    } catch {
+      return [];
+    }
+  })();
+
+  const allergens = (() => {
+    try {
+      return JSON.parse(meal.allergens) as string[];
+    } catch {
+      return [];
+    }
+  })();
+
+  const photoPaths = (() => {
+    try {
+      return JSON.parse(meal.photoPaths) as string[];
+    } catch {
+      return [];
+    }
+  })();
+
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 pb-24 pt-8">
       <header className="space-y-2">
@@ -102,6 +126,24 @@ export default async function MealDetailPage({
         </div>
       </section>
 
+      {photoPaths.length > 1 ? (
+        <section className="rounded-card border border-border bg-surface p-4">
+          <p className="text-sm font-medium text-text-primary">More photos</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {photoPaths.map((photo) => (
+              <Image
+                key={photo}
+                src={photo}
+                alt={`${meal.name} photo`}
+                width={220}
+                height={180}
+                className="h-32 w-full rounded-md object-cover"
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="rounded-card border border-border bg-surface p-4">
         <p className="text-sm font-medium text-text-primary">Macros</p>
         <div className="mt-3 grid grid-cols-2 gap-3 text-sm text-text-secondary">
@@ -135,6 +177,14 @@ export default async function MealDetailPage({
             </p>
             <p className="mt-1 font-display text-lg text-text-primary">
               {meal.fat}g
+            </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-text-tertiary">
+              Satiating
+            </p>
+            <p className="mt-1 font-display text-lg text-text-primary">
+              {meal.satiating}/5
             </p>
           </div>
         </div>
@@ -171,6 +221,30 @@ export default async function MealDetailPage({
           )}
         </ul>
       </section>
+
+      {tools.length ? (
+        <section className="rounded-card border border-border bg-surface p-4">
+          <p className="text-sm font-medium text-text-primary">Tools</p>
+          <ul className="mt-3 space-y-2 text-sm text-text-secondary">
+            {tools.map((tool) => (
+              <li key={tool} className="text-text-primary">
+                {tool}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {allergens.length ? (
+        <section className="rounded-card border border-border bg-surface p-4">
+          <p className="text-sm font-medium text-text-primary">Allergens</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {allergens.map((allergen) => (
+              <TagChip key={allergen} label={allergen} tone="accent" />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="rounded-card border border-border bg-surface p-4">
         <p className="text-sm font-medium text-text-primary">Steps</p>

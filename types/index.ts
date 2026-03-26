@@ -18,6 +18,7 @@ export type MealData = {
   description: string;
   emoji: string;
   photoPath?: string | null;
+  photoPaths?: string[];
   category: "breakfast" | "protein" | "veggie" | "carbs" | "light" | "snack";
   colorTheme: "amber" | "coral" | "green" | "teal" | "blue";
   calories: number;
@@ -25,12 +26,15 @@ export type MealData = {
   carbs: number;
   fat: number;
   fibre: number;
+  satiating: number;
   prepMinutes: number;
   cookMinutes: number;
   difficulty: 1 | 2 | 3;
   tags: string[];
   ingredients: IngredientEntry[];
   steps: string[];
+  tools: string[];
+  allergens: string[];
   isVegetarian: boolean;
   isVegan: boolean;
   isGlutenFree: boolean;
@@ -46,6 +50,7 @@ export type MealRecord = {
   description: string;
   emoji: string;
   photoPath: string | null;
+  photoPaths: string;
   category: string;
   colorTheme: string;
   calories: number;
@@ -53,12 +58,15 @@ export type MealRecord = {
   carbs: number;
   fat: number;
   fibre: number;
+  satiating: number;
   prepMinutes: number;
   cookMinutes: number;
   difficulty: number;
   tags: string;
   ingredients: string;
   steps: string;
+  tools: string;
+  allergens: string;
   isVegetarian: boolean;
   isVegan: boolean;
   isGlutenFree: boolean;
@@ -78,11 +86,14 @@ export type MealMatch = MealRecord & {
 
 export type MealFeedItem = Omit<
   MealMatch,
-  "tags" | "ingredients" | "steps"
+  "tags" | "ingredients" | "steps" | "tools" | "allergens" | "photoPaths"
 > & {
   tags: string[];
   ingredients: IngredientEntry[];
   steps: string[];
+  tools: string[];
+  allergens: string[];
+  photoPaths: string[];
 };
 
 export type ProfileRecord = {

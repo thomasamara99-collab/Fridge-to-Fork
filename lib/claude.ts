@@ -19,6 +19,7 @@ const mealSchema = z.object({
   carbs: z.number().int().min(0),
   fat: z.number().int().min(0),
   fibre: z.number().int().min(0),
+  satiating: z.number().int().min(1).max(5),
   prepMinutes: z.number().int().min(0),
   cookMinutes: z.number().int().min(0),
   difficulty: z.union([z.literal(1), z.literal(2), z.literal(3)]),
@@ -31,6 +32,9 @@ const mealSchema = z.object({
     }),
   ),
   steps: z.array(z.string()).min(1),
+  tools: z.array(z.string()),
+  allergens: z.array(z.string()),
+  photoPaths: z.array(z.string()).optional().default([]),
   isVegetarian: z.boolean(),
   isVegan: z.boolean(),
   isGlutenFree: z.boolean(),
@@ -45,7 +49,7 @@ const responseSchema = z.array(mealSchema);
 const emergencyMeal: MealData = {
   name: "Lemon herb chicken bowl",
   description: "Simple chicken with rice and lemony greens",
-  emoji: "🍋",
+  emoji: "??",
   category: "protein",
   colorTheme: "coral",
   calories: 430,
@@ -53,6 +57,7 @@ const emergencyMeal: MealData = {
   carbs: 45,
   fat: 12,
   fibre: 4,
+  satiating: 4,
   prepMinutes: 8,
   cookMinutes: 12,
   difficulty: 1,
@@ -68,6 +73,9 @@ const emergencyMeal: MealData = {
     "Sear chicken until cooked through.",
     "Toss spinach with lemon and serve with chicken over rice.",
   ],
+  tools: ["skillet", "saucepan"],
+  allergens: [],
+  photoPaths: [],
   isVegetarian: false,
   isVegan: false,
   isGlutenFree: true,
@@ -80,8 +88,8 @@ const emergencyMeal: MealData = {
 const systemPrompt =
   "You are a precision nutrition chef. Generate meal suggestions as valid JSON only. " +
   "No commentary, no markdown, no text outside the JSON array. " +
-  "All macro values must be consistent: protein×4 + carbs×4 + fat×9 must equal " +
-  "calories within ±15. Return only a JSON array.";
+  "All macro values must be consistent: protein*4 + carbs*4 + fat*9 must equal " +
+  "calories within +/- 15. Return only a JSON array.";
 
 const buildUserPrompt = (context: {
   remainingCalories: number;
@@ -120,12 +128,15 @@ Return this exact structure per meal:
   "carbs": 0,
   "fat": 0,
   "fibre": 0,
+  "satiating": 3,
   "prepMinutes": 0,
   "cookMinutes": 0,
   "difficulty": 1,
   "tags": [],
   "ingredients": [{"name":"","amount":"","category":""}],
   "steps": [],
+  "tools": [],
+  "allergens": [],
   "isVegetarian": false,
   "isVegan": false,
   "isGlutenFree": false,

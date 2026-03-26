@@ -122,6 +122,9 @@ export async function GET(request: Request) {
     tags: JSON.parse(meal.tags),
     ingredients: JSON.parse(meal.ingredients),
     steps: JSON.parse(meal.steps),
+    tools: JSON.parse(meal.tools),
+    allergens: JSON.parse(meal.allergens),
+    photoPaths: JSON.parse(meal.photoPaths),
   }));
 
   return NextResponse.json(payload);

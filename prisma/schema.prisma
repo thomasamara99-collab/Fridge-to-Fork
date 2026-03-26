@@ -63,6 +63,7 @@ model Meal {
   description String
   emoji       String
   photoPath   String?
+  photoPaths  String   @default("[]")
   category    String
   colorTheme  String
 
@@ -71,6 +72,7 @@ model Meal {
   carbs       Int
   fat         Int
   fibre       Int
+  satiating   Int      @default(3)
 
   prepMinutes Int
   cookMinutes Int
@@ -79,6 +81,8 @@ model Meal {
   tags        String
   ingredients String
   steps       String
+  tools       String   @default("[]")
+  allergens   String   @default("[]")
 
   isVegetarian Boolean @default(false)
   isVegan      Boolean @default(false)

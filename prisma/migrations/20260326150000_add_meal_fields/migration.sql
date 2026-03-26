@@ -1,0 +1,5 @@
+-- Add community meal metadata fields
+ALTER TABLE "Meal" ADD COLUMN "photoPaths" TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE "Meal" ADD COLUMN "satiating" INTEGER NOT NULL DEFAULT 3;
+ALTER TABLE "Meal" ADD COLUMN "tools" TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE "Meal" ADD COLUMN "allergens" TEXT NOT NULL DEFAULT '[]';

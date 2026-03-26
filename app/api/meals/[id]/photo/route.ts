@@ -32,12 +32,27 @@ export async function POST(
   const buffer = Buffer.from(bytes);
   const uploadDir = path.join(process.cwd(), "public", "uploads", "meals");
   await fs.mkdir(uploadDir, { recursive: true });
-  const filePath = path.join(uploadDir, `${params.id}.jpg`);
+  const fileName = `${params.id}.jpg`;
+  const filePath = path.join(uploadDir, fileName);
   await fs.writeFile(filePath, buffer);
+
+  const storedPath = `/uploads/meals/${fileName}`;
+  let photoPaths: string[] = [];
+  try {
+    photoPaths = JSON.parse(meal.photoPaths) as string[];
+  } catch {
+    photoPaths = [];
+  }
+  if (!photoPaths.includes(storedPath)) {
+    photoPaths = [storedPath, ...photoPaths];
+  }
 
   await prisma.meal.update({
     where: { id: params.id },
-    data: { photoPath: `/uploads/meals/${params.id}.jpg` },
+    data: {
+      photoPath: storedPath,
+      photoPaths: JSON.stringify(photoPaths),
+    },
   });
 
   return NextResponse.json({ ok: true });

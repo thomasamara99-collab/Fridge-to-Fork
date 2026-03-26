@@ -14,7 +14,12 @@ export default function SignupPage() {
             Start building meals that fit your day perfectly.
           </p>
         </div>
-        <SignUp path="/signup" routing="path" signInUrl="/login" />
+        <SignUp
+          path="/signup"
+          routing="path"
+          signInUrl="/login"
+          afterSignUpUrl="/onboarding/step-1"
+        />
       </div>
     </main>
   );

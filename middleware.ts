@@ -10,11 +10,15 @@ export default clerkMiddleware(
     }
 
     const { userId } = auth();
+    const isApiRoute = request.nextUrl.pathname.startsWith("/api");
     if (!userId) {
+      if (isApiRoute) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    if (request.nextUrl.pathname.startsWith("/onboarding")) {
+    if (isApiRoute || request.nextUrl.pathname.startsWith("/onboarding")) {
       return NextResponse.next();
     }
 
@@ -34,5 +38,5 @@ export default clerkMiddleware(
 );
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
 };
