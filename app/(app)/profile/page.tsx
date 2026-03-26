@@ -146,9 +146,14 @@ export default function ProfilePage() {
       <section className="rounded-card border border-border bg-surface p-5">
         <p className="text-sm font-medium text-text-primary">My meals</p>
         <p className="mt-2 text-sm text-text-secondary">
-          Custom meal tracking is coming next. You&apos;ll be able to see and edit
-          everything you add.
+          Add your own recipes to keep the recommendations personal.
         </p>
+        <Link
+          href="/meals/add"
+          className="mt-4 inline-flex items-center justify-center rounded-md border border-border bg-surface-2 px-4 py-2 text-xs text-text-primary"
+        >
+          Add a meal
+        </Link>
       </section>
 
       {isLoading ? (

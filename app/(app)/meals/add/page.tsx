@@ -1,0 +1,649 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+import PhotoUpload from "../../../../components/meal/PhotoUpload";
+
+const categoryOptions = [
+  { value: "breakfast", label: "Breakfast" },
+  { value: "protein", label: "High protein" },
+  { value: "veggie", label: "Vegetarian" },
+  { value: "carbs", label: "Carb focused" },
+  { value: "light", label: "Light" },
+  { value: "snack", label: "Snack" },
+] as const;
+
+const colorOptions = [
+  { value: "amber", label: "Amber", swatch: "bg-yellow-light" },
+  { value: "coral", label: "Coral", swatch: "bg-accent-light" },
+  { value: "green", label: "Green", swatch: "bg-green-light" },
+  { value: "teal", label: "Teal", swatch: "bg-[#E6F5F4]" },
+  { value: "blue", label: "Blue", swatch: "bg-[#EAF1FB]" },
+] as const;
+
+const ingredientCategories = [
+  "protein",
+  "veg",
+  "carb",
+  "dairy",
+  "pantry",
+  "fruit",
+  "other",
+] as const;
+
+const tagOptions = [
+  "budget",
+  "high protein",
+  "quick",
+  "meal prep",
+  "pre-workout",
+  "breakfast",
+  "vegetarian",
+  "vegan",
+  "gluten-free",
+  "dairy-free",
+] as const;
+
+const ingredientSchema = z.object({
+  name: z.string().min(1, "Required"),
+  amount: z.string().min(1, "Required"),
+  category: z.string().min(1, "Required"),
+});
+
+const schema = z.object({
+  name: z.string().min(1, "Required"),
+  description: z.string().max(80, "Max 80 characters").optional(),
+  emoji: z.string().min(1, "Required").max(4),
+  category: z.enum([
+    "breakfast",
+    "protein",
+    "veggie",
+    "carbs",
+    "light",
+    "snack",
+  ]),
+  colorTheme: z.enum(["amber", "coral", "green", "teal", "blue"]),
+  calories: z.number().min(50, "Minimum 50 kcal"),
+  protein: z.number().min(0),
+  carbs: z.number().min(0),
+  fat: z.number().min(0),
+  fibre: z.number().min(0),
+  prepMinutes: z.number().min(0),
+  cookMinutes: z.number().min(0),
+  difficulty: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  tags: z.array(z.string()),
+  ingredients: z.array(ingredientSchema).min(1),
+  steps: z.array(z.object({ value: z.string().min(1, "Required") })).min(1),
+  isVegetarian: z.boolean(),
+  isVegan: z.boolean(),
+  isGlutenFree: z.boolean(),
+  isDairyFree: z.boolean(),
+  isHalal: z.boolean(),
+  isKosher: z.boolean(),
+  isNutFree: z.boolean(),
+});
+
+type FormValues = z.infer<typeof schema>;
+
+export default function AddMealPage() {
+  const router = useRouter();
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      name: "",
+      description: "",
+      emoji: "🍽️",
+      category: "protein",
+      colorTheme: "amber",
+      calories: 450,
+      protein: 35,
+      carbs: 40,
+      fat: 15,
+      fibre: 4,
+      prepMinutes: 10,
+      cookMinutes: 15,
+      difficulty: 2,
+      tags: [],
+      ingredients: [{ name: "", amount: "", category: "protein" }],
+      steps: [{ value: "" }],
+      isVegetarian: false,
+      isVegan: false,
+      isGlutenFree: false,
+      isDairyFree: false,
+      isHalal: false,
+      isKosher: false,
+      isNutFree: false,
+    },
+  });
+
+  const { fields: ingredientFields, append: appendIngredient, remove: removeIngredient } =
+    useFieldArray({
+      control,
+      name: "ingredients",
+    });
+
+  const { fields: stepFields, append: appendStep, remove: removeStep } =
+    useFieldArray({
+      control,
+      name: "steps",
+    });
+
+  const selectedTags = watch("tags");
+  const selectedDifficulty = watch("difficulty");
+  const selectedTheme = watch("colorTheme");
+  const calories = watch("calories") ?? 0;
+  const protein = watch("protein") ?? 0;
+  const carbs = watch("carbs") ?? 0;
+  const fat = watch("fat") ?? 0;
+
+  const macroCalories = useMemo(
+    () => protein * 4 + carbs * 4 + fat * 9,
+    [protein, carbs, fat],
+  );
+  const macroDelta = Math.abs(macroCalories - calories);
+  const macroMatches = calories > 0 && macroDelta <= 50;
+
+  const toggleTag = (tag: string) => {
+    const next = selectedTags.includes(tag)
+      ? selectedTags.filter((item) => item !== tag)
+      : [...selectedTags, tag];
+    setValue("tags", next, { shouldDirty: true });
+  };
+
+  const handleFileChange = (file: File | null) => {
+    setPhotoError(null);
+    setPhotoFile(file);
+
+    if (!file) {
+      setPhotoPreview(null);
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("Please upload an image file.");
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPhotoPreview(typeof reader.result === "string" ? reader.result : null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const onSubmit = handleSubmit(async (data) => {
+    setSubmitError(null);
+
+    const formData = new FormData();
+    formData.append("name", data.name);
+    if (data.description) formData.append("description", data.description);
+    formData.append("emoji", data.emoji);
+    formData.append("category", data.category);
+    formData.append("colorTheme", data.colorTheme);
+    formData.append("calories", String(data.calories));
+    formData.append("protein", String(data.protein));
+    formData.append("carbs", String(data.carbs));
+    formData.append("fat", String(data.fat));
+    formData.append("fibre", String(data.fibre));
+    formData.append("prepMinutes", String(data.prepMinutes));
+    formData.append("cookMinutes", String(data.cookMinutes));
+    formData.append("difficulty", String(data.difficulty));
+    formData.append("tags", JSON.stringify(data.tags));
+    formData.append("ingredients", JSON.stringify(data.ingredients));
+    formData.append(
+      "steps",
+      JSON.stringify(data.steps.map((step) => step.value)),
+    );
+    formData.append("isVegetarian", String(data.isVegetarian));
+    formData.append("isVegan", String(data.isVegan));
+    formData.append("isGlutenFree", String(data.isGlutenFree));
+    formData.append("isDairyFree", String(data.isDairyFree));
+    formData.append("isHalal", String(data.isHalal));
+    formData.append("isKosher", String(data.isKosher));
+    formData.append("isNutFree", String(data.isNutFree));
+
+    if (photoFile) {
+      formData.append("photo", photoFile);
+    }
+
+    const response = await fetch("/api/meals/add", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      setSubmitError("We couldn't save that meal. Please try again.");
+      return;
+    }
+
+    router.push("/swipe");
+  });
+
+  return (
+    <main className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 pb-24 pt-8">
+      <header className="space-y-2">
+        <p className="text-xs uppercase tracking-wide text-text-tertiary">
+          Create a custom meal
+        </p>
+        <h1 className="font-display text-3xl text-text-primary">
+          Add your own recipe
+        </h1>
+        <p className="text-sm text-text-secondary">
+          This helps the app learn what you actually cook. Keep it short and
+          practical.
+        </p>
+      </header>
+
+      <form className="space-y-6" onSubmit={onSubmit}>
+        <section className="rounded-card border border-border bg-surface p-4">
+          <p className="text-xs uppercase tracking-wide text-text-tertiary">
+            Basics
+          </p>
+          <div className="mt-4 space-y-4">
+            <label className="block">
+              <span className="text-xs uppercase tracking-wide text-text-tertiary">
+                Meal name
+              </span>
+              <input
+                {...register("name")}
+                className="mt-2 w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+              />
+              {errors.name ? (
+                <p className="mt-1 text-xs text-accent-text">
+                  {errors.name.message}
+                </p>
+              ) : null}
+            </label>
+
+            <label className="block">
+              <span className="text-xs uppercase tracking-wide text-text-tertiary">
+                Description
+              </span>
+              <input
+                {...register("description")}
+                placeholder="Optional, max 80 characters"
+                className="mt-2 w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+              />
+              {errors.description ? (
+                <p className="mt-1 text-xs text-accent-text">
+                  {errors.description.message}
+                </p>
+              ) : null}
+            </label>
+
+            <div className="grid grid-cols-2 gap-4">
+              <label className="block">
+                <span className="text-xs uppercase tracking-wide text-text-tertiary">
+                  Emoji
+                </span>
+                <input
+                  {...register("emoji")}
+                  className="mt-2 w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-lg text-text-primary outline-none focus:border-accent focus:bg-white"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs uppercase tracking-wide text-text-tertiary">
+                  Category
+                </span>
+                <select
+                  {...register("category")}
+                  className="mt-2 w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+                >
+                  {categoryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div>
+              <span className="text-xs uppercase tracking-wide text-text-tertiary">
+                Color theme
+              </span>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {colorOptions.map((option) => {
+                  const active = selectedTheme === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setValue("colorTheme", option.value)}
+                      className={`flex items-center gap-2 rounded-full border px-3 py-2 text-xs ${
+                        active
+                          ? "border-accent text-text-primary"
+                          : "border-border text-text-secondary"
+                      }`}
+                    >
+                      <span
+                        className={`h-4 w-4 rounded-full border border-border ${option.swatch}`}
+                      />
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-card border border-border bg-surface p-4">
+          <p className="text-xs uppercase tracking-wide text-text-tertiary">
+            Macros
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <label className="block">
+              <span className="text-xs uppercase tracking-wide text-text-tertiary">
+                Calories
+              </span>
+              <input
+                type="number"
+                {...register("calories", { valueAsNumber: true })}
+                className="mt-2 w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+              />
+              {errors.calories ? (
+                <p className="mt-1 text-xs text-accent-text">
+                  {errors.calories.message}
+                </p>
+              ) : null}
+            </label>
+            <label className="block">
+              <span className="text-xs uppercase tracking-wide text-text-tertiary">
+                Protein (g)
+              </span>
+              <input
+                type="number"
+                {...register("protein", { valueAsNumber: true })}
+                className="mt-2 w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs uppercase tracking-wide text-text-tertiary">
+                Carbs (g)
+              </span>
+              <input
+                type="number"
+                {...register("carbs", { valueAsNumber: true })}
+                className="mt-2 w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs uppercase tracking-wide text-text-tertiary">
+                Fat (g)
+              </span>
+              <input
+                type="number"
+                {...register("fat", { valueAsNumber: true })}
+                className="mt-2 w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs uppercase tracking-wide text-text-tertiary">
+                Fibre (g)
+              </span>
+              <input
+                type="number"
+                {...register("fibre", { valueAsNumber: true })}
+                className="mt-2 w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+              />
+            </label>
+          </div>
+          <div
+            className={`mt-4 rounded-md px-3 py-2 text-xs ${
+              macroMatches
+                ? "bg-green-light text-green-text"
+                : "bg-yellow-light text-text-secondary"
+            }`}
+          >
+            Macro calories: {macroCalories} kcal
+            {calories > 0
+              ? macroMatches
+                ? " - Looks aligned with your calorie total."
+                : " - Adjust macros to be within +/- 50 kcal."
+              : null}
+          </div>
+        </section>
+
+        <section className="rounded-card border border-border bg-surface p-4">
+          <p className="text-xs uppercase tracking-wide text-text-tertiary">
+            Timing & difficulty
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <label className="block">
+              <span className="text-xs uppercase tracking-wide text-text-tertiary">
+                Prep minutes
+              </span>
+              <input
+                type="number"
+                {...register("prepMinutes", { valueAsNumber: true })}
+                className="mt-2 w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs uppercase tracking-wide text-text-tertiary">
+                Cook minutes
+              </span>
+              <input
+                type="number"
+                {...register("cookMinutes", { valueAsNumber: true })}
+                className="mt-2 w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+              />
+            </label>
+          </div>
+          <div className="mt-4">
+            <span className="text-xs uppercase tracking-wide text-text-tertiary">
+              Difficulty
+            </span>
+            <input type="hidden" {...register("difficulty")} />
+            <div className="mt-2 grid grid-cols-3 gap-2 rounded-md bg-surface-2 p-1">
+              {[1, 2, 3].map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setValue("difficulty", level as 1 | 2 | 3)}
+                  className={`rounded-md px-2 py-2 text-xs font-medium ${
+                    selectedDifficulty === level
+                      ? "bg-white text-text-primary shadow"
+                      : "text-text-secondary"
+                  }`}
+                >
+                  {level === 1 ? "Easy" : level === 2 ? "Medium" : "Hard"}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-card border border-border bg-surface p-4">
+          <p className="text-xs uppercase tracking-wide text-text-tertiary">
+            Dietary flags
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-3 text-sm text-text-secondary">
+            {[
+              { key: "isVegetarian", label: "Vegetarian" },
+              { key: "isVegan", label: "Vegan" },
+              { key: "isGlutenFree", label: "Gluten-free" },
+              { key: "isDairyFree", label: "Dairy-free" },
+              { key: "isHalal", label: "Halal" },
+              { key: "isKosher", label: "Kosher" },
+              { key: "isNutFree", label: "Nut-free" },
+            ].map((flag) => (
+              <label
+                key={flag.key}
+                className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2"
+              >
+                <input
+                  type="checkbox"
+                  {...register(flag.key as keyof FormValues)}
+                  className="accent-[var(--accent)]"
+                />
+                {flag.label}
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-card border border-border bg-surface p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-wide text-text-tertiary">
+              Ingredients
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                appendIngredient({ name: "", amount: "", category: "other" })
+              }
+              className="rounded-full border border-border px-3 py-1 text-xs text-text-secondary"
+            >
+              Add row
+            </button>
+          </div>
+          <div className="mt-4 space-y-3">
+            {ingredientFields.map((field, index) => (
+              <div
+                key={field.id}
+                className="grid grid-cols-[1.2fr_1fr_0.9fr_auto] items-center gap-2"
+              >
+                <input
+                  {...register(`ingredients.${index}.name`)}
+                  placeholder="Ingredient"
+                  className="rounded-md border border-transparent bg-surface-2 px-3 py-2 text-xs text-text-primary outline-none focus:border-accent focus:bg-white"
+                />
+                <input
+                  {...register(`ingredients.${index}.amount`)}
+                  placeholder="Amount"
+                  className="rounded-md border border-transparent bg-surface-2 px-3 py-2 text-xs text-text-primary outline-none focus:border-accent focus:bg-white"
+                />
+                <select
+                  {...register(`ingredients.${index}.category`)}
+                  className="rounded-md border border-transparent bg-surface-2 px-3 py-2 text-xs text-text-primary outline-none focus:border-accent focus:bg-white"
+                >
+                  {ingredientCategories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => removeIngredient(index)}
+                  className="text-xs text-text-tertiary"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            {errors.ingredients ? (
+              <p className="text-xs text-accent-text">
+                Add at least one ingredient.
+              </p>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="rounded-card border border-border bg-surface p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-wide text-text-tertiary">
+              Steps
+            </p>
+            <button
+              type="button"
+              onClick={() => appendStep({ value: "" })}
+              className="rounded-full border border-border px-3 py-1 text-xs text-text-secondary"
+            >
+              Add step
+            </button>
+          </div>
+          <div className="mt-4 space-y-3">
+            {stepFields.map((field, index) => (
+              <div key={field.id} className="flex items-start gap-2">
+                <textarea
+                  rows={2}
+                  {...register(`steps.${index}.value`)}
+                  placeholder={`Step ${index + 1}`}
+                  className="w-full rounded-md border border-transparent bg-surface-2 px-3 py-2 text-xs text-text-primary outline-none focus:border-accent focus:bg-white"
+                />
+                {stepFields.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => removeStep(index)}
+                    className="pt-2 text-xs text-text-tertiary"
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </div>
+            ))}
+            {errors.steps ? (
+              <p className="text-xs text-accent-text">
+                Add at least one step.
+              </p>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="rounded-card border border-border bg-surface p-4">
+          <p className="text-xs uppercase tracking-wide text-text-tertiary">
+            Tags
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {tagOptions.map((tag) => {
+              const active = selectedTags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={`rounded-full border px-3 py-1 text-xs ${
+                    active
+                      ? "border-accent bg-accent-light text-accent-text"
+                      : "border-border bg-surface text-text-secondary"
+                  }`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <PhotoUpload
+          previewUrl={photoPreview}
+          onFileChange={handleFileChange}
+          error={photoError ?? undefined}
+        />
+
+        {submitError ? (
+          <p className="text-sm text-accent-text">{submitError}</p>
+        ) : null}
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full rounded-md bg-accent px-5 py-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSubmitting ? "Saving..." : "Save meal"}
+        </button>
+      </form>
+    </main>
+  );
+}
