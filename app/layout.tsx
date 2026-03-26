@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, Fraunces } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -29,7 +30,9 @@ export default function RootLayout({
       <body
         className={`${dmSans.variable} ${fraunces.variable} min-h-screen bg-[var(--bg)] text-[var(--text-primary)] antialiased`}
       >
-        {children}
+        <ClerkProvider signInUrl="/login" signUpUrl="/signup">
+          {children}
+        </ClerkProvider>
       </body>
     </html>
   );

@@ -1,41 +1,37 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const publicPaths = ["/login", "/signup", "/onboarding"];
+const isPublicRoute = createRouteMatcher(["/login(.*)", "/signup(.*)"]);
 
-export default async function middleware(request: NextRequest) {
-  const { nextUrl } = request;
-  const { pathname } = nextUrl;
+export default clerkMiddleware(
+  async (auth, request: NextRequest) => {
+    if (isPublicRoute(request)) {
+      return NextResponse.next();
+    }
 
-  if (publicPaths.some((path) => pathname.startsWith(path))) {
+    const { userId } = auth();
+    if (!userId) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+
+    if (request.nextUrl.pathname.startsWith("/onboarding")) {
+      return NextResponse.next();
+    }
+
+    const profileResponse = await fetch(new URL("/api/profile", request.url), {
+      headers: {
+        cookie: request.headers.get("cookie") ?? "",
+      },
+    });
+
+    if (profileResponse.status === 404) {
+      return NextResponse.redirect(new URL("/onboarding/step-1", request.url));
+    }
+
     return NextResponse.next();
-  }
-
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-
-  if (!token) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  if (pathname.startsWith("/onboarding")) {
-    return NextResponse.next();
-  }
-
-  const profileResponse = await fetch(new URL("/api/profile", request.url), {
-    headers: {
-      cookie: request.headers.get("cookie") ?? "",
-    },
-  });
-
-  if (profileResponse.status === 404) {
-    return NextResponse.redirect(new URL("/onboarding/step-1", request.url));
-  }
-
-  return NextResponse.next();
-}
+  },
+  { signInUrl: "/login", signUpUrl: "/signup" },
+);
 
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],

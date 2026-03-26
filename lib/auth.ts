@@ -1,96 +1,48 @@
-import type { NextAuthConfig } from "next-auth";
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
-import { z } from "zod";
+import { auth as clerkAuth, currentUser } from "@clerk/nextjs/server";
 
 import { prisma } from "./prisma";
 
-const resolveAuthUrl = () => {
-  const candidate =
-    process.env.NEXTAUTH_URL ??
-    process.env.AUTH_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined);
-
-  if (!candidate) return undefined;
-  if (candidate.startsWith("http://") || candidate.startsWith("https://")) {
-    return candidate;
-  }
-  return `https://${candidate}`;
+export type AppSession = {
+  user: {
+    id: string;
+  };
 };
 
-const resolvedAuthUrl = resolveAuthUrl();
-if (resolvedAuthUrl) {
-  process.env.NEXTAUTH_URL = resolvedAuthUrl;
-  process.env.AUTH_URL = resolvedAuthUrl;
-}
+const ensureUser = async () => {
+  const user = await currentUser();
+  const userId = user?.id;
+  if (!userId) return null;
 
-const credentialsSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-});
+  const email = (
+    user.emailAddresses?.[0]?.emailAddress ?? `${userId}@users.clerk`
+  ).toLowerCase();
+  const name =
+    [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
+    user.username ||
+    null;
 
-export const authConfig: NextAuthConfig = {
-  secret: process.env.NEXTAUTH_SECRET,
-  trustHost: true,
-  session: {
-    strategy: "jwt",
-  },
-  pages: {
-    signIn: "/login",
-  },
-  providers: [
-    Credentials({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        const parsed = credentialsSchema.safeParse(credentials);
-        if (!parsed.success) return null;
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) return existing;
 
-        const email = parsed.data.email.trim().toLowerCase();
-        const user = await prisma.user.findFirst({
-          where: {
-            email: {
-              equals: email,
-              mode: "insensitive",
-            },
-          },
-        });
-
-        if (!user) return null;
-
-        const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
-        if (!ok) return null;
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name ?? "",
-        };
-      },
-    }),
-  ],
-  callbacks: {
-    jwt: async ({ token, user }) => {
-      if (user) {
-        token.userId = user.id;
-        token.name = user.name;
-        token.email = user.email;
-      }
-      return token;
+  return prisma.user.create({
+    data: {
+      email,
+      name,
+      passwordHash: "clerk",
     },
-    session: async ({ session, token }) => {
-      if (session.user) {
-        session.user.id = token.userId as string;
-        session.user.name = token.name as string;
-        session.user.email = token.email as string;
-      }
-      return session;
-    },
-  },
+  });
 };
 
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
+export const auth = async (): Promise<AppSession | null> => {
+  const { userId } = clerkAuth();
+  if (!userId) return null;
+
+  const dbUser = await ensureUser();
+  if (!dbUser) return null;
+
+  return {
+    user: {
+      id: dbUser.id,
+    },
+  };
+};
