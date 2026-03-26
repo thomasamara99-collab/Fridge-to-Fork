@@ -14,11 +14,7 @@ export default function LoginPage() {
             Log in to pick up where you left off.
           </p>
         </div>
-        <SignIn
-          path="/login"
-          routing="path"
-          signUpUrl="/signup"
-        />
+        <SignIn path="/login" routing="path" signUpUrl="/signup" />
       </div>
     </main>
   );
