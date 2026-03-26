@@ -16,7 +16,7 @@ export default function LoginPage() {
         </div>
         <SignIn
           path="/login"
-          routing="hash"
+          routing="path"
           signUpUrl="/signup"
         />
       </div>
