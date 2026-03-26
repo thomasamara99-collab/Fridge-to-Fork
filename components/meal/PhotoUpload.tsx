@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 type PhotoUploadProps = {
   previewUrl: string | null;
   onFileChange: (file: File | null) => void;
@@ -18,11 +19,14 @@ export default function PhotoUpload({
       </p>
       <div className="mt-3 space-y-3">
         {previewUrl ? (
-          <div className="overflow-hidden rounded-md border border-border">
-            <img
+          <div className="relative h-48 overflow-hidden rounded-md border border-border">
+            <Image
               src={previewUrl}
               alt="Meal preview"
-              className="h-48 w-full object-cover"
+              fill
+              sizes="(max-width: 768px) 100vw, 420px"
+              className="object-cover"
+              unoptimized
             />
           </div>
         ) : (

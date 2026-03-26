@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import StepLayout from "../../../components/onboarding/StepLayout";
 import { useOnboardingStore } from "../../../store/onboardingStore";
@@ -120,7 +119,6 @@ const pantrySections = [
 ] as const;
 
 export default function Step6Page() {
-  const router = useRouter();
   const {
     name,
     age,
