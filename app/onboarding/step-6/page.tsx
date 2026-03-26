@@ -268,7 +268,7 @@ export default function Step6Page() {
           await Promise.all(fridgeRequests);
         }
 
-      router.push("/onboarding/complete");
+      window.location.href = "/swipe";
     } catch (err) {
       setError(
         err instanceof Error

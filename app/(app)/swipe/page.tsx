@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 
 import MacroRing from "../../../components/ui/MacroRing";
 import SwipeDeck from "../../../components/meal/SwipeDeck";
@@ -12,6 +13,7 @@ import { fetchMealFeed } from "../../../hooks/useMealFeed";
 import type { MealFeedItem, TodayLog } from "../../../types";
 
 export default function SwipePage() {
+  const router = useRouter();
   const {
     deck,
     filters,
@@ -51,6 +53,8 @@ export default function SwipePage() {
     carbs: 0,
     fat: 0,
   };
+
+  const frontMeal = deck[0];
 
   const handleSwipe = async (meal: MealFeedItem, direction: "left" | "right") => {
     shiftDeck();
@@ -216,17 +220,25 @@ export default function SwipePage() {
           onClick={() => setPendingSwipe("left")}
           disabled={!deck.length}
         >
-          ✕
+          X
         </button>
-        <button className="h-12 w-12 rounded-full border border-border bg-white text-lg">
-          📋
+        <button
+          className="h-12 w-12 rounded-full border border-border bg-white text-[11px]"
+          onClick={() => {
+            if (frontMeal) {
+              router.push(`/meals/${frontMeal.id}`);
+            }
+          }}
+          disabled={!frontMeal}
+        >
+          Recipe
         </button>
         <button
           className="h-16 w-16 rounded-full bg-accent text-lg text-white"
           onClick={() => setPendingSwipe("right")}
           disabled={!deck.length}
         >
-          ✓
+          Cook
         </button>
       </section>
     </main>
