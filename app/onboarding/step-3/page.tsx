@@ -1,17 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import StepLayout from "../../../components/onboarding/StepLayout";
 import MacroTargetEditor from "../../../components/onboarding/MacroTargetEditor";
 import { calculateTDEE, suggestMacros } from "../../../lib/nutrition";
 import { useOnboardingStore } from "../../../store/onboardingStore";
+import { useProfile } from "../../../hooks/useProfile";
 
 type MacroPreset = "high" | "balanced" | "low" | "custom";
 
 export default function Step3Page() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editMode = searchParams.get("edit") === "1";
+  const { data: profile } = useProfile({ enabled: editMode });
   const {
     age,
     sex,
@@ -27,41 +31,70 @@ export default function Step3Page() {
     setTargets,
   } = useOnboardingStore();
 
-  const hasStats = age && sex && weightKg && heightCm && goalPreset;
+  const profileGoalPreset: GoalPreset =
+    profile?.goal === "custom"
+      ? "maintain"
+      : (profile?.goal as GoalPreset | undefined) ?? "";
+
+  const baseAge = editMode ? profile?.age ?? age : age;
+  const baseSex = editMode ? profile?.sex ?? sex : sex;
+  const baseWeight = editMode ? profile?.weightKg ?? weightKg : weightKg;
+  const baseHeight = editMode ? profile?.heightCm ?? heightCm : heightCm;
+  const baseGoalPreset = editMode ? profileGoalPreset : goalPreset;
+
+  const hasStats = editMode
+    ? Boolean(profile)
+    : Boolean(baseAge && baseSex && baseWeight && baseHeight && baseGoalPreset);
   const tdee = useMemo(() => {
-    if (!age || !sex || !weightKg || !heightCm || !goalPreset) return 0;
+    if (!baseAge || !baseSex || !baseWeight || !baseHeight || !baseGoalPreset) {
+      return 0;
+    }
     return calculateTDEE({
-      weightKg,
-      heightCm,
-      age,
-      sex,
+      weightKg: baseWeight,
+      heightCm: baseHeight,
+      age: baseAge,
+      sex: baseSex,
       activityLevel: "moderate",
     });
-  }, [age, sex, weightKg, heightCm, goalPreset]);
+  }, [baseAge, baseSex, baseWeight, baseHeight, baseGoalPreset]);
 
   const suggested = useMemo(() => {
-    if (!age || !sex || !weightKg || !heightCm || !goalPreset) {
+    if (!baseAge || !baseSex || !baseWeight || !baseHeight || !baseGoalPreset) {
       return { calories: 0, protein: 0, carbs: 0, fat: 0 };
     }
-    return suggestMacros(tdee, goalPreset, weightKg);
-  }, [age, sex, weightKg, heightCm, goalPreset, tdee]);
+    return suggestMacros(tdee, baseGoalPreset, baseWeight);
+  }, [baseAge, baseSex, baseWeight, baseHeight, baseGoalPreset, tdee]);
 
-  const [customMode, setCustomMode] = useState(!useSuggested);
+  const [customMode, setCustomMode] = useState(editMode ? true : !useSuggested);
   const [calories, setCalories] = useState(
-    targetCalories ?? suggested.calories,
+    (editMode ? profile?.targetCalories : targetCalories) ?? suggested.calories,
   );
   const [protein, setProtein] = useState(
-    targetProtein ?? suggested.protein,
+    (editMode ? profile?.targetProtein : targetProtein) ?? suggested.protein,
   );
-  const [carbs, setCarbs] = useState(targetCarbs ?? suggested.carbs);
-  const [fat, setFat] = useState(targetFat ?? suggested.fat);
+  const [carbs, setCarbs] = useState(
+    (editMode ? profile?.targetCarbs : targetCarbs) ?? suggested.carbs,
+  );
+  const [fat, setFat] = useState(
+    (editMode ? profile?.targetFat : targetFat) ?? suggested.fat,
+  );
   const [preset, setPreset] = useState<MacroPreset>("custom");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!editMode || !profile) return;
+    setCalories(profile.targetCalories);
+    setProtein(profile.targetProtein);
+    setCarbs(profile.targetCarbs);
+    setFat(profile.targetFat);
+    setCustomMode(true);
+  }, [editMode, profile]);
 
   const helperText = !hasStats
     ? "Complete step 1 to see suggestions."
-    : goalPreset === "cut"
+    : baseGoalPreset === "cut"
       ? "This is a 400 kcal deficit to help you lose ~0.5kg/week."
-      : goalPreset === "bulk"
+      : baseGoalPreset === "bulk"
         ? "This is a 300 kcal surplus to support muscle growth."
         : "This keeps you steady with balanced energy.";
 
@@ -82,7 +115,7 @@ export default function Step3Page() {
     setFat(nextFat);
   };
 
-  const submit = () => {
+  const submit = async () => {
     const finalCalories = customMode ? calories : suggested.calories;
     const finalProtein = customMode ? protein : suggested.protein;
     const finalCarbs = customMode ? carbs : suggested.carbs;
@@ -90,7 +123,29 @@ export default function Step3Page() {
     const goalFinal =
       Math.abs(finalCalories - suggested.calories) > 100
         ? "custom"
-        : goalPreset;
+        : baseGoalPreset;
+
+    if (editMode) {
+      setSubmitting(true);
+      try {
+        await fetch("/api/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            targetCalories: finalCalories,
+            targetProtein: finalProtein,
+            targetCarbs: finalCarbs,
+            targetFat: finalFat,
+            calculatedTdee: calculatedTdee ?? tdee,
+            goal: goalFinal,
+          }),
+        });
+        router.push("/profile");
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
 
     setTargets({
       useSuggested: !customMode,
@@ -107,16 +162,20 @@ export default function Step3Page() {
 
   return (
     <StepLayout
-      step={3}
-      total={6}
-      title="Calorie targets"
-      subtitle="Tune your calorie and macro goals for today."
-      ctaLabel="Continue"
-      onBack="/onboarding/step-2"
-      disabled={!hasStats}
+      step={editMode ? 1 : 3}
+      total={editMode ? 1 : 6}
+      title={editMode ? "Update targets" : "Calorie targets"}
+      subtitle={
+        editMode
+          ? "Update your calorie and macro targets without redoing onboarding."
+          : "Tune your calorie and macro goals for today."
+      }
+      ctaLabel={submitting ? "Saving..." : editMode ? "Save changes" : "Continue"}
+      onBack={editMode ? "/profile" : "/onboarding/step-2"}
+      disabled={!hasStats || submitting}
       onSubmit={(event) => {
         event.preventDefault();
-        submit();
+        void submit();
       }}
     >
       <div className="space-y-5">

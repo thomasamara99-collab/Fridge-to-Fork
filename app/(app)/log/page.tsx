@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import MacroRing from "../../../components/ui/MacroRing";
@@ -8,6 +8,18 @@ import ProgressBar from "../../../components/ui/ProgressBar";
 import { useTodayLog } from "../../../hooks/useTodayLog";
 import { useProfile } from "../../../hooks/useProfile";
 import type { LoggedMeal, TodayLog } from "../../../types";
+
+type BarcodeDetectorConstructor = new (options?: {
+  formats?: string[];
+}) => {
+  detect: (image: ImageBitmapSource) => Promise<Array<{ rawValue: string }>>;
+};
+
+declare global {
+  interface Window {
+    BarcodeDetector?: BarcodeDetectorConstructor;
+  }
+}
 
 const getRemainingMessage = (remaining: number) => {
   const hour = new Date().getHours();
@@ -34,6 +46,14 @@ export default function LogPage() {
     "idle" | "loading" | "found" | "missing" | "error"
   >("idle");
   const [barcodeMessage, setBarcodeMessage] = useState("");
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannerStatus, setScannerStatus] = useState<
+    "idle" | "starting" | "scanning" | "found" | "error"
+  >("idle");
+  const [scannerError, setScannerError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const scanningRef = useRef(false);
   const [quickError, setQuickError] = useState<string | null>(null);
   const [quickSubmitting, setQuickSubmitting] = useState(false);
 
@@ -142,8 +162,8 @@ export default function LogPage() {
     }
   };
 
-  const lookupBarcode = async () => {
-    const trimmed = barcode.trim();
+  const lookupBarcode = async (value?: string) => {
+    const trimmed = (value ?? barcode).trim();
     if (!trimmed) {
       setBarcodeStatus("error");
       setBarcodeMessage("Enter a barcode to look up.");
@@ -176,6 +196,7 @@ export default function LogPage() {
         fat: number;
       };
 
+      setBarcode(trimmed);
       setQuickName(item.name ?? "Barcode item");
       setQuickCalories(String(item.calories ?? ""));
       setQuickProtein(String(item.protein ?? ""));
@@ -188,6 +209,89 @@ export default function LogPage() {
       setBarcodeMessage("We couldn't look that up right now.");
     }
   };
+
+  const stopScanner = () => {
+    scanningRef.current = false;
+    setScannerStatus("idle");
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  const startScanner = async () => {
+    setScannerError(null);
+
+    const Detector = window.BarcodeDetector;
+    if (!Detector) {
+      setScannerStatus("error");
+      setScannerError(
+        "Barcode scanning is not supported on this device. Use manual entry instead.",
+      );
+      return;
+    }
+
+    if (scannerStatus === "starting" || scannerStatus === "scanning") return;
+
+    setScannerStatus("starting");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      const detector = new Detector({
+        formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"],
+      });
+
+      scanningRef.current = true;
+      setScannerStatus("scanning");
+
+      const scanLoop = async () => {
+        if (!scanningRef.current || !videoRef.current) return;
+        try {
+          const results = await detector.detect(videoRef.current);
+          if (results.length && results[0]?.rawValue) {
+            const value = results[0].rawValue;
+            setScannerStatus("found");
+            setScannerOpen(false);
+            stopScanner();
+            await lookupBarcode(value);
+            return;
+          }
+        } catch {
+          setScannerStatus("error");
+          setScannerError("Scanning failed. Try manual entry.");
+          stopScanner();
+          return;
+        }
+        requestAnimationFrame(scanLoop);
+      };
+
+      requestAnimationFrame(scanLoop);
+    } catch {
+      setScannerStatus("error");
+      setScannerError("Camera access failed. Check permissions.");
+      stopScanner();
+    }
+  };
+
+  useEffect(() => {
+    if (!scannerOpen) {
+      stopScanner();
+    }
+
+    return () => stopScanner();
+  }, [scannerOpen]);
 
   const deleteMeal = async (meal: LoggedMeal) => {
     if (!meal.id) return;
@@ -266,13 +370,38 @@ export default function LogPage() {
           </div>
         </div>
         <div className="mt-4 space-y-3">
-          <button
-            type="button"
-            disabled
-            className="w-full rounded-md border border-dashed border-border bg-surface-2 px-4 py-3 text-sm text-text-tertiary"
-          >
-            Scan barcode (coming soon)
-          </button>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => {
+                const next = !scannerOpen;
+                setScannerOpen(next);
+                if (next) {
+                  void startScanner();
+                }
+              }}
+              className="w-full rounded-md border border-border bg-surface-2 px-4 py-3 text-sm text-text-secondary"
+            >
+              {scannerOpen ? "Stop scan" : "Scan barcode"}
+            </button>
+            {scannerOpen ? (
+              <div className="overflow-hidden rounded-md border border-border bg-black">
+                <video
+                  ref={videoRef}
+                  className="h-48 w-full object-cover"
+                  muted
+                  playsInline
+                />
+              </div>
+            ) : null}
+            {scannerError ? (
+              <p className="text-xs text-accent-text">{scannerError}</p>
+            ) : scannerStatus === "scanning" ? (
+              <p className="text-xs text-text-secondary">
+                Point the camera at a barcode.
+              </p>
+            ) : null}
+          </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <input
               value={barcode}

@@ -100,6 +100,10 @@ export default function AddMealPage() {
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [analysisStatus, setAnalysisStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [analysisMessage, setAnalysisMessage] = useState<string | null>(null);
 
   const {
     register,
@@ -188,6 +192,8 @@ export default function AddMealPage() {
     setPhotoError(null);
     setPhotoFiles([]);
     setPhotoPreviews([]);
+    setAnalysisStatus("idle");
+    setAnalysisMessage(null);
 
     if (!files.length) {
       return;
@@ -273,6 +279,154 @@ export default function AddMealPage() {
 
     router.push("/swipe");
   });
+
+  const runPhotoAnalysis = async () => {
+    setAnalysisMessage(null);
+
+    if (!photoFiles.length) {
+      setAnalysisStatus("error");
+      setAnalysisMessage("Upload a photo first.");
+      return;
+    }
+
+    setAnalysisStatus("loading");
+    const formData = new FormData();
+    formData.append("photo", photoFiles[0]);
+
+    try {
+      const response = await fetch("/api/meals/analyze", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        setAnalysisStatus("error");
+        setAnalysisMessage(
+          payload?.error ?? "AI analysis is unavailable right now.",
+        );
+        return;
+      }
+
+      const result = (await response.json()) as Partial<{
+        name: string;
+        description: string;
+        calories: number;
+        protein: number;
+        carbs: number;
+        fat: number;
+        fibre: number;
+        satiating: number;
+        prepMinutes: number;
+        cookMinutes: number;
+        difficulty: number;
+        tags: string[];
+        ingredients: { name: string; amount: string }[];
+        steps: string[];
+        tools: string[];
+        allergens: string[];
+        isVegetarian: boolean;
+        isVegan: boolean;
+        isGlutenFree: boolean;
+        isDairyFree: boolean;
+        isHalal: boolean;
+        isKosher: boolean;
+        isNutFree: boolean;
+      }>;
+
+      if (result.name) setValue("name", result.name, { shouldDirty: true });
+      if (result.description) {
+        setValue("description", result.description, { shouldDirty: true });
+      }
+      if (typeof result.calories === "number") {
+        setValue("calories", result.calories, { shouldDirty: true });
+      }
+      if (typeof result.protein === "number") {
+        setValue("protein", result.protein, { shouldDirty: true });
+      }
+      if (typeof result.carbs === "number") {
+        setValue("carbs", result.carbs, { shouldDirty: true });
+      }
+      if (typeof result.fat === "number") {
+        setValue("fat", result.fat, { shouldDirty: true });
+      }
+      if (typeof result.fibre === "number") {
+        setValue("fibre", result.fibre, { shouldDirty: true });
+      }
+      if (typeof result.satiating === "number") {
+        setValue("satiating", result.satiating, { shouldDirty: true });
+      }
+      if (typeof result.prepMinutes === "number") {
+        setValue("prepMinutes", result.prepMinutes, { shouldDirty: true });
+      }
+      if (typeof result.cookMinutes === "number") {
+        setValue("cookMinutes", result.cookMinutes, { shouldDirty: true });
+      }
+      if (typeof result.difficulty === "number") {
+        const level = Math.min(3, Math.max(1, Math.round(result.difficulty)));
+        setValue("difficulty", level as 1 | 2 | 3, { shouldDirty: true });
+      }
+      if (Array.isArray(result.tags)) {
+        setValue("tags", result.tags, { shouldDirty: true });
+      }
+      if (Array.isArray(result.ingredients) && result.ingredients.length) {
+        setValue(
+          "ingredients",
+          result.ingredients.map((item) => ({
+            name: item.name ?? "",
+            amount: item.amount ?? "",
+          })),
+          { shouldDirty: true },
+        );
+      }
+      if (Array.isArray(result.steps) && result.steps.length) {
+        setValue(
+          "steps",
+          result.steps.map((step) => ({ value: step })),
+          { shouldDirty: true },
+        );
+      }
+      if (Array.isArray(result.tools) && result.tools.length) {
+        setValue(
+          "tools",
+          result.tools.map((tool) => ({ value: tool })),
+          { shouldDirty: true },
+        );
+      }
+      if (Array.isArray(result.allergens)) {
+        setValue("allergens", result.allergens, { shouldDirty: true });
+      }
+      if (typeof result.isVegetarian === "boolean") {
+        setValue("isVegetarian", result.isVegetarian, { shouldDirty: true });
+      }
+      if (typeof result.isVegan === "boolean") {
+        setValue("isVegan", result.isVegan, { shouldDirty: true });
+      }
+      if (typeof result.isGlutenFree === "boolean") {
+        setValue("isGlutenFree", result.isGlutenFree, { shouldDirty: true });
+      }
+      if (typeof result.isDairyFree === "boolean") {
+        setValue("isDairyFree", result.isDairyFree, { shouldDirty: true });
+      }
+      if (typeof result.isHalal === "boolean") {
+        setValue("isHalal", result.isHalal, { shouldDirty: true });
+      }
+      if (typeof result.isKosher === "boolean") {
+        setValue("isKosher", result.isKosher, { shouldDirty: true });
+      }
+      if (typeof result.isNutFree === "boolean") {
+        setValue("isNutFree", result.isNutFree, { shouldDirty: true });
+      }
+
+      setAnalysisStatus("success");
+      setAnalysisMessage("Fields pre-filled from the photo.");
+    } catch {
+      setAnalysisStatus("error");
+      setAnalysisMessage("AI analysis failed. Please fill manually.");
+    }
+  };
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 pb-24 pt-8">
@@ -692,6 +846,38 @@ export default function AddMealPage() {
           onFilesChange={handleFileChange}
           error={photoError ?? undefined}
         />
+
+        <section className="rounded-card border border-border bg-surface p-4">
+          <p className="text-xs uppercase tracking-wide text-text-tertiary">
+            AI assist
+          </p>
+          <p className="mt-2 text-sm text-text-secondary">
+            Use a meal photo to pre-fill ingredients and macros.
+          </p>
+          <div className="mt-4 space-y-2">
+            <button
+              type="button"
+              onClick={runPhotoAnalysis}
+              disabled={analysisStatus === "loading"}
+              className="w-full rounded-md border border-border bg-surface-2 px-4 py-3 text-sm text-text-secondary disabled:opacity-60"
+            >
+              {analysisStatus === "loading"
+                ? "Analyzing..."
+                : "Analyze photo with AI"}
+            </button>
+            {analysisMessage ? (
+              <p
+                className={`text-xs ${
+                  analysisStatus === "success"
+                    ? "text-green-text"
+                    : "text-accent-text"
+                }`}
+              >
+                {analysisMessage}
+              </p>
+            ) : null}
+          </div>
+        </section>
 
         {submitError ? (
           <p className="text-sm text-accent-text">{submitError}</p>

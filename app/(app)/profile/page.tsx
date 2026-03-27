@@ -77,7 +77,7 @@ export default function ProfilePage() {
       <section className="rounded-card border border-border bg-surface p-5">
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium text-text-primary">Your targets</p>
-          <Link href="/onboarding/step-3" className="text-xs text-accent">
+          <Link href="/onboarding/step-3?edit=1" className="text-xs text-accent">
             Edit
           </Link>
         </div>

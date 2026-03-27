@@ -32,10 +32,11 @@ const fetchProfile = async (): Promise<Profile> => {
   return response.json() as Promise<Profile>;
 };
 
-export function useProfile() {
+export function useProfile(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["profile"],
     queryFn: fetchProfile,
     staleTime: 60_000,
+    enabled: options?.enabled ?? true,
   });
 }
