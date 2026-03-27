@@ -10,6 +10,7 @@ import { useOnboardingStore } from "../../../store/onboardingStore";
 import { useProfile } from "../../../hooks/useProfile";
 
 type MacroPreset = "high" | "balanced" | "low" | "custom";
+type GoalPreset = "cut" | "maintain" | "bulk" | "";
 
 export default function Step3Page() {
   const router = useRouter();
