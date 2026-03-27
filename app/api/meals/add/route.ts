@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { promises as fs } from "fs";
-import path from "path";
-
 import { auth } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
+import { saveMealPhoto } from "../../../../lib/storage";
 
 export const runtime = "nodejs";
 
@@ -140,9 +138,6 @@ export async function POST(request: Request) {
     },
   });
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "meals");
-  await fs.mkdir(uploadDir, { recursive: true });
-
   const files = formData
     .getAll("photos")
     .filter((item): item is File => item instanceof File && item.size > 0);
@@ -158,12 +153,8 @@ export async function POST(request: Request) {
     const storedPaths: string[] = [];
     await Promise.all(
       files.map(async (file, index) => {
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        const fileName = `${meal.id}-${index + 1}.jpg`;
-        const filePath = path.join(uploadDir, fileName);
-        await fs.writeFile(filePath, buffer);
-        storedPaths.push(`/uploads/meals/${fileName}`);
+        const stored = await saveMealPhoto(file, meal.id, index + 1);
+        storedPaths.push(stored);
       }),
     );
 

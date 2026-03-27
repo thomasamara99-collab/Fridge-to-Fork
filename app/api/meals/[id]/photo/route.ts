@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
-
 import { auth } from "../../../../../lib/auth";
 import { prisma } from "../../../../../lib/prisma";
+import { saveMealPhoto } from "../../../../../lib/storage";
 
 export const runtime = "nodejs";
 
@@ -28,15 +26,7 @@ export async function POST(
     return NextResponse.json({ error: "Missing photo." }, { status: 400 });
   }
 
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "meals");
-  await fs.mkdir(uploadDir, { recursive: true });
-  const fileName = `${params.id}.jpg`;
-  const filePath = path.join(uploadDir, fileName);
-  await fs.writeFile(filePath, buffer);
-
-  const storedPath = `/uploads/meals/${fileName}`;
+  const storedPath = await saveMealPhoto(file, params.id, 1);
   let photoPaths: string[] = [];
   try {
     photoPaths = JSON.parse(meal.photoPaths) as string[];

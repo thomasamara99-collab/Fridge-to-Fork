@@ -54,7 +54,7 @@ async function main() {
       legacyNames: [],
       description: "Classic beef pasta with rich, simple sauce",
       emoji: "\u{1F35D}",
-      photoPath: "/uploads/meals/simple-beef-rigatoni.jpg",
+      photoPath: "/uploads/meals/simple-beef-rigatoni.jpeg",
       category: "protein",
       colorTheme: "coral",
       calories: 615,

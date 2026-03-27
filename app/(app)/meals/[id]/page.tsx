@@ -2,6 +2,7 @@ import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 
 import TagChip from "../../../../components/ui/TagChip";
+import AdminPhotoUploader from "../../../../components/meal/AdminPhotoUploader";
 import { auth } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
 import type { IngredientEntry } from "../../../../types";
@@ -143,6 +144,8 @@ export default async function MealDetailPage({
           </div>
         </section>
       ) : null}
+
+      <AdminPhotoUploader mealId={meal.id} />
 
       <section className="rounded-card border border-border bg-surface p-4">
         <p className="text-sm font-medium text-text-primary">Macros</p>
