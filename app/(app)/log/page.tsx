@@ -29,6 +29,11 @@ export default function LogPage() {
   const [quickProtein, setQuickProtein] = useState("");
   const [quickCarbs, setQuickCarbs] = useState("");
   const [quickFat, setQuickFat] = useState("");
+  const [barcode, setBarcode] = useState("");
+  const [barcodeStatus, setBarcodeStatus] = useState<
+    "idle" | "loading" | "found" | "missing" | "error"
+  >("idle");
+  const [barcodeMessage, setBarcodeMessage] = useState("");
   const [quickError, setQuickError] = useState<string | null>(null);
   const [quickSubmitting, setQuickSubmitting] = useState(false);
 
@@ -129,11 +134,58 @@ export default function LogPage() {
       setQuickProtein("");
       setQuickCarbs("");
       setQuickFat("");
-    } catch (error) {
+    } catch {
       setQuickError("We couldn't log that entry. Please try again.");
     } finally {
       setQuickSubmitting(false);
       queryClient.invalidateQueries({ queryKey: ["log", "today"] });
+    }
+  };
+
+  const lookupBarcode = async () => {
+    const trimmed = barcode.trim();
+    if (!trimmed) {
+      setBarcodeStatus("error");
+      setBarcodeMessage("Enter a barcode to look up.");
+      return;
+    }
+
+    setBarcodeStatus("loading");
+    setBarcodeMessage("");
+
+    try {
+      const response = await fetch(
+        `/api/foods/lookup?barcode=${encodeURIComponent(trimmed)}`,
+      );
+
+      if (response.status === 404) {
+        setBarcodeStatus("missing");
+        setBarcodeMessage("No match yet. You can still log manually.");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Lookup failed.");
+      }
+
+      const item = (await response.json()) as {
+        name: string;
+        calories: number;
+        protein: number;
+        carbs: number;
+        fat: number;
+      };
+
+      setQuickName(item.name ?? "Barcode item");
+      setQuickCalories(String(item.calories ?? ""));
+      setQuickProtein(String(item.protein ?? ""));
+      setQuickCarbs(String(item.carbs ?? ""));
+      setQuickFat(String(item.fat ?? ""));
+      setBarcodeStatus("found");
+      setBarcodeMessage("Filled from barcode data.");
+    } catch {
+      setBarcodeStatus("error");
+      setBarcodeMessage("We couldn't look that up right now.");
     }
   };
 
@@ -214,6 +266,43 @@ export default function LogPage() {
           </div>
         </div>
         <div className="mt-4 space-y-3">
+          <button
+            type="button"
+            disabled
+            className="w-full rounded-md border border-dashed border-border bg-surface-2 px-4 py-3 text-sm text-text-tertiary"
+          >
+            Scan barcode (coming soon)
+          </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              value={barcode}
+              onChange={(event) => setBarcode(event.target.value)}
+              placeholder="Enter barcode"
+              inputMode="numeric"
+              className="w-full rounded-md border border-transparent bg-surface-2 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent focus:bg-white"
+            />
+            <button
+              type="button"
+              onClick={lookupBarcode}
+              disabled={barcodeStatus === "loading"}
+              className="rounded-md border border-border px-4 py-3 text-sm text-text-secondary disabled:opacity-60"
+            >
+              {barcodeStatus === "loading" ? "Checking..." : "Lookup"}
+            </button>
+          </div>
+          {barcodeMessage ? (
+            <p
+              className={`text-xs ${
+                barcodeStatus === "found"
+                  ? "text-green-text"
+                  : barcodeStatus === "missing"
+                    ? "text-text-secondary"
+                    : "text-accent-text"
+              }`}
+            >
+              {barcodeMessage}
+            </p>
+          ) : null}
           <input
             value={quickName}
             onChange={(event) => setQuickName(event.target.value)}

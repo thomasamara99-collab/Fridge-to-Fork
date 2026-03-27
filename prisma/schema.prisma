@@ -18,6 +18,7 @@ model User {
   logs         DailyLog[]
   swipes       Swipe[]
   customMeals  Meal[]       @relation("UserMeals")
+  foodItems    FoodItem[]   @relation("UserFoods")
   sessions     Session[]
 }
 
@@ -146,4 +147,19 @@ model Swipe {
   meal      Meal     @relation(fields: [mealId], references: [id])
   direction String
   swipedAt  DateTime @default(now())
+}
+
+model FoodItem {
+  id          String   @id @default(cuid())
+  barcode     String   @unique
+  name        String
+  brand       String?
+  servingSize String?
+  calories    Int
+  protein     Int
+  carbs       Int
+  fat         Int
+  createdBy   String?
+  creator     User?    @relation("UserFoods", fields: [createdBy], references: [id])
+  createdAt   DateTime @default(now())
 }
