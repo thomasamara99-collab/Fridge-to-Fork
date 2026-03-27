@@ -412,7 +412,9 @@ export default function LogPage() {
             />
             <button
               type="button"
-              onClick={lookupBarcode}
+              onClick={() => {
+                void lookupBarcode();
+              }}
               disabled={barcodeStatus === "loading"}
               className="rounded-md border border-border px-4 py-3 text-sm text-text-secondary disabled:opacity-60"
             >
