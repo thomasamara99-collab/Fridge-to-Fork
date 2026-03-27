@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+ï»¿import { NextResponse } from "next/server";
 
 import { auth } from "../../../../lib/auth";
 
@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 const systemPrompt = `You are a precision nutrition chef and recipe parser.
 Return ONLY valid JSON. No prose, no markdown, no commentary.
-All macro values must be consistent: protein×4 + carbs×4 + fat×9 ˜ calories (±15).
+All macro values must be consistent: protein*4 + carbs*4 + fat*9 ~= calories (+/-15).
 If the photo is ambiguous, make a best-effort estimate without stating uncertainty.`;
 
 const userPrompt = `Analyze the meal photo and return a SINGLE JSON object with this exact structure:
@@ -43,13 +43,13 @@ const userPrompt = `Analyze the meal photo and return a SINGLE JSON object with 
 }
 
 Rules:
-- Keep description = 80 characters.
+- Keep description <= 80 characters.
 - Difficulty must be 1, 2, or 3.
-- Include 4–8 ingredients with realistic amounts.
-- Include 3–6 steps.
+- Include 4-8 ingredients with realistic amounts.
+- Include 3-6 steps.
 - Tags should be a small, relevant subset.
 - If unsure about a tag or flag, leave it false or omit the tag.
-- Ensure macro calories are within ±15 of the stated calories.
+- Ensure macro calories are within +/-15 of the stated calories.
 Return ONLY the JSON object.`;
 
 export async function POST(request: Request) {

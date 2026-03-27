@@ -15,12 +15,21 @@ type SwipeState = {
 };
 
 const defaultFilters: ActiveFilters = {
+  noConstraints: false,
   fridgeOnly: true,
   underTwentyMin: false,
+  underThirtyMin: false,
   highProtein: false,
   preWorkout: false,
   budget: false,
   underFiveHundredKcal: false,
+  vegetarianOnly: false,
+  veganOnly: false,
+  glutenFreeOnly: false,
+  dairyFreeOnly: false,
+  nutFreeOnly: false,
+  lowCarb: false,
+  highFiber: false,
 };
 
 export const useSwipeStore = create<SwipeState>((set, get) => ({
@@ -36,8 +45,41 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
   },
   setHungerLevel: (level) => set({ hungerLevel: level }),
   toggleFilter: (key) =>
-    set((state) => ({
-      filters: { ...state.filters, [key]: !state.filters[key] },
-    })),
+    set((state) => {
+      if (key === "noConstraints") {
+        const next = !state.filters.noConstraints;
+        if (next) {
+          return {
+            filters: {
+              ...state.filters,
+              noConstraints: true,
+              fridgeOnly: false,
+              underTwentyMin: false,
+              underThirtyMin: false,
+              highProtein: false,
+              preWorkout: false,
+              budget: false,
+              underFiveHundredKcal: false,
+              vegetarianOnly: false,
+              veganOnly: false,
+              glutenFreeOnly: false,
+              dairyFreeOnly: false,
+              nutFreeOnly: false,
+              lowCarb: false,
+              highFiber: false,
+            },
+          };
+        }
+        return { filters: { ...state.filters, noConstraints: false } };
+      }
+
+      return {
+        filters: {
+          ...state.filters,
+          noConstraints: false,
+          [key]: !state.filters[key],
+        },
+      };
+    }),
   setFilters: (filters) => set({ filters }),
 }));

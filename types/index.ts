@@ -1,10 +1,19 @@
 export type ActiveFilters = {
+  noConstraints: boolean;
   fridgeOnly: boolean;
   underTwentyMin: boolean;
+  underThirtyMin: boolean;
   highProtein: boolean;
   preWorkout: boolean;
   budget: boolean;
   underFiveHundredKcal: boolean;
+  vegetarianOnly: boolean;
+  veganOnly: boolean;
+  glutenFreeOnly: boolean;
+  dairyFreeOnly: boolean;
+  nutFreeOnly: boolean;
+  lowCarb: boolean;
+  highFiber: boolean;
 };
 
 export type IngredientEntry = {

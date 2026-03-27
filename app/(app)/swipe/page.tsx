@@ -123,12 +123,21 @@ export default function SwipePage() {
   };
 
   const filterOptions: Array<{ key: keyof typeof filters; label: string }> = [
+    { key: "noConstraints", label: "No constraints" },
     { key: "fridgeOnly", label: "In my fridge" },
     { key: "underTwentyMin", label: "Under 20 min" },
+    { key: "underThirtyMin", label: "Under 30 min" },
     { key: "highProtein", label: "High protein" },
     { key: "preWorkout", label: "Pre-workout" },
     { key: "budget", label: "Budget" },
     { key: "underFiveHundredKcal", label: "Under 500 kcal" },
+    { key: "vegetarianOnly", label: "Vegetarian" },
+    { key: "veganOnly", label: "Vegan" },
+    { key: "glutenFreeOnly", label: "Gluten-free" },
+    { key: "dairyFreeOnly", label: "Dairy-free" },
+    { key: "nutFreeOnly", label: "Nut-free" },
+    { key: "lowCarb", label: "Low carb" },
+    { key: "highFiber", label: "High fiber" },
   ];
 
   return (

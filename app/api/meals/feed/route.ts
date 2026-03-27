@@ -8,33 +8,60 @@ import type { ActiveFilters } from "../../../../types";
 const parseFilters = (raw: string | null): ActiveFilters => {
   if (!raw) {
     return {
+      noConstraints: false,
       fridgeOnly: false,
       underTwentyMin: false,
+      underThirtyMin: false,
       highProtein: false,
       preWorkout: false,
       budget: false,
       underFiveHundredKcal: false,
+      vegetarianOnly: false,
+      veganOnly: false,
+      glutenFreeOnly: false,
+      dairyFreeOnly: false,
+      nutFreeOnly: false,
+      lowCarb: false,
+      highFiber: false,
     };
   }
 
   try {
     const parsed = JSON.parse(raw) as Partial<ActiveFilters>;
     return {
+      noConstraints: Boolean(parsed.noConstraints),
       fridgeOnly: Boolean(parsed.fridgeOnly),
       underTwentyMin: Boolean(parsed.underTwentyMin),
+      underThirtyMin: Boolean(parsed.underThirtyMin),
       highProtein: Boolean(parsed.highProtein),
       preWorkout: Boolean(parsed.preWorkout),
       budget: Boolean(parsed.budget),
       underFiveHundredKcal: Boolean(parsed.underFiveHundredKcal),
+      vegetarianOnly: Boolean(parsed.vegetarianOnly),
+      veganOnly: Boolean(parsed.veganOnly),
+      glutenFreeOnly: Boolean(parsed.glutenFreeOnly),
+      dairyFreeOnly: Boolean(parsed.dairyFreeOnly),
+      nutFreeOnly: Boolean(parsed.nutFreeOnly),
+      lowCarb: Boolean(parsed.lowCarb),
+      highFiber: Boolean(parsed.highFiber),
     };
   } catch {
     return {
+      noConstraints: false,
       fridgeOnly: false,
       underTwentyMin: false,
+      underThirtyMin: false,
       highProtein: false,
       preWorkout: false,
       budget: false,
       underFiveHundredKcal: false,
+      vegetarianOnly: false,
+      veganOnly: false,
+      glutenFreeOnly: false,
+      dairyFreeOnly: false,
+      nutFreeOnly: false,
+      lowCarb: false,
+      highFiber: false,
     };
   }
 };

@@ -96,6 +96,10 @@ const passesHardFilters = (
   const tags = jsonArray<string[]>(meal.tags, []);
   const ingredients = jsonArray<{ name: string }[]>(meal.ingredients, []);
 
+  if (filters.noConstraints) {
+    return { ok: true, tags, ingredients };
+  }
+
   if (dietaryFilters.includes("vegetarian") && !meal.isVegetarian) {
     return { ok: false, tags, ingredients };
   }
@@ -118,6 +122,22 @@ const passesHardFilters = (
     return { ok: false, tags, ingredients };
   }
 
+  if (filters.vegetarianOnly && !meal.isVegetarian) {
+    return { ok: false, tags, ingredients };
+  }
+  if (filters.veganOnly && !meal.isVegan) {
+    return { ok: false, tags, ingredients };
+  }
+  if (filters.glutenFreeOnly && !meal.isGlutenFree) {
+    return { ok: false, tags, ingredients };
+  }
+  if (filters.dairyFreeOnly && !meal.isDairyFree) {
+    return { ok: false, tags, ingredients };
+  }
+  if (filters.nutFreeOnly && !meal.isNutFree) {
+    return { ok: false, tags, ingredients };
+  }
+
   if (
     disliked.length &&
     ingredients.some((ingredient) =>
@@ -133,7 +153,16 @@ const passesHardFilters = (
   if (filters.underTwentyMin && totalMinutes > 20) {
     return { ok: false, tags, ingredients };
   }
+  if (filters.underThirtyMin && totalMinutes > 30) {
+    return { ok: false, tags, ingredients };
+  }
   if (filters.underFiveHundredKcal && meal.calories > 520) {
+    return { ok: false, tags, ingredients };
+  }
+  if (filters.lowCarb && meal.carbs > 35) {
+    return { ok: false, tags, ingredients };
+  }
+  if (filters.highFiber && meal.fibre < 8) {
     return { ok: false, tags, ingredients };
   }
   if (filters.budget && !tags.includes("budget")) {
@@ -167,7 +196,7 @@ const scoreMeals = (
     const fridgePct =
       totalIngredients === 0 ? 0 : fridgeMatches / totalIngredients;
 
-    if (input.filters.fridgeOnly && fridgePct < 0.5) {
+    if (!input.filters.noConstraints && input.filters.fridgeOnly && fridgePct < 0.5) {
       continue;
     }
 
@@ -182,7 +211,7 @@ const scoreMeals = (
     const remainingProtein =
       input.profile.targetProtein - input.todayLog.protein;
 
-    if (remainingCalories < 300 && meal.calories > 400) {
+    if (!input.filters.noConstraints && remainingCalories < 300 && meal.calories > 400) {
       continue;
     }
 
@@ -217,9 +246,16 @@ const scoreMeals = (
       contextScore += 5;
     }
     if (
-      input.filters.underTwentyMin &&
-      meal.prepMinutes + meal.cookMinutes <= 20
+      (input.filters.underTwentyMin || input.filters.underThirtyMin) &&
+      meal.prepMinutes + meal.cookMinutes <=
+        (input.filters.underTwentyMin ? 20 : 30)
     ) {
+      contextScore += 3;
+    }
+    if (input.filters.lowCarb && meal.carbs <= 35) {
+      contextScore += 3;
+    }
+    if (input.filters.highFiber && meal.fibre >= 8) {
       contextScore += 3;
     }
 
