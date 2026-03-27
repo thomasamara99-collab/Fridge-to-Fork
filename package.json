@@ -45,7 +45,7 @@
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
-  }
+  },
   "build": "prisma migrate deploy && prisma generate && next build"
   }
 }
