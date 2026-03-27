@@ -444,6 +444,43 @@ export default function AddMealPage() {
       </header>
 
       <form className="space-y-6" onSubmit={onSubmit}>
+        <PhotoUpload
+          previewUrls={photoPreviews}
+          onFilesChange={handleFileChange}
+          error={photoError ?? undefined}
+        />
+
+        <section className="rounded-card border border-border bg-surface p-4">
+          <p className="text-xs uppercase tracking-wide text-text-tertiary">
+            AI assist
+          </p>
+          <p className="mt-2 text-sm text-text-secondary">
+            Use a meal photo to pre-fill ingredients and macros.
+          </p>
+          <div className="mt-4 space-y-2">
+            <button
+              type="button"
+              onClick={runPhotoAnalysis}
+              disabled={analysisStatus === "loading"}
+              className="w-full rounded-md border border-border bg-surface-2 px-4 py-3 text-sm text-text-secondary disabled:opacity-60"
+            >
+              {analysisStatus === "loading"
+                ? "Analyzing..."
+                : "Analyze photo with AI"}
+            </button>
+            {analysisMessage ? (
+              <p
+                className={`text-xs ${
+                  analysisStatus === "success"
+                    ? "text-green-text"
+                    : "text-accent-text"
+                }`}
+              >
+                {analysisMessage}
+              </p>
+            ) : null}
+          </div>
+        </section>
         <section className="rounded-card border border-border bg-surface p-4">
           <p className="text-xs uppercase tracking-wide text-text-tertiary">
             Basics
@@ -838,44 +875,6 @@ export default function AddMealPage() {
                 </button>
               );
             })}
-          </div>
-        </section>
-
-        <PhotoUpload
-          previewUrls={photoPreviews}
-          onFilesChange={handleFileChange}
-          error={photoError ?? undefined}
-        />
-
-        <section className="rounded-card border border-border bg-surface p-4">
-          <p className="text-xs uppercase tracking-wide text-text-tertiary">
-            AI assist
-          </p>
-          <p className="mt-2 text-sm text-text-secondary">
-            Use a meal photo to pre-fill ingredients and macros.
-          </p>
-          <div className="mt-4 space-y-2">
-            <button
-              type="button"
-              onClick={runPhotoAnalysis}
-              disabled={analysisStatus === "loading"}
-              className="w-full rounded-md border border-border bg-surface-2 px-4 py-3 text-sm text-text-secondary disabled:opacity-60"
-            >
-              {analysisStatus === "loading"
-                ? "Analyzing..."
-                : "Analyze photo with AI"}
-            </button>
-            {analysisMessage ? (
-              <p
-                className={`text-xs ${
-                  analysisStatus === "success"
-                    ? "text-green-text"
-                    : "text-accent-text"
-                }`}
-              >
-                {analysisMessage}
-              </p>
-            ) : null}
           </div>
         </section>
 
