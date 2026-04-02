@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
 import { getRankedMeals } from "../../../../lib/mealEngine";
+import { ensureBaseMeals } from "../../../../lib/baseMeals";
 import type { ActiveFilters } from "../../../../types";
 
 const parseFilters = (raw: string | null): ActiveFilters => {
@@ -79,9 +80,11 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const filters = parseFilters(searchParams.get("filters"));
+  let filters = parseFilters(searchParams.get("filters"));
   const hungerLevel = Number(searchParams.get("hunger") ?? "3");
   const limit = Number(searchParams.get("limit") ?? "5");
+
+  await ensureBaseMeals(prisma);
 
   const [profile, fridgeItems, meals] = await Promise.all([
     prisma.profile.findUnique({ where: { userId: session.user.id } }),
@@ -128,7 +131,7 @@ export async function GET(request: Request) {
     {},
   );
 
-  const ranked = await getRankedMeals({
+  let ranked = await getRankedMeals({
     meals,
     profile,
     fridgeItems,
@@ -144,6 +147,24 @@ export async function GET(request: Request) {
     limit,
   });
 
+  if (!ranked.length && !filters.noConstraints) {
+    ranked = await getRankedMeals({
+      meals,
+      profile,
+      fridgeItems,
+      todayLog,
+      filters: { ...filters, noConstraints: true, fridgeOnly: false },
+      hungerLevel,
+      swipes: swipes.map((swipe) => ({
+        mealId: swipe.mealId,
+        direction: swipe.direction as "left" | "right",
+        swipedAt: swipe.swipedAt,
+      })),
+      todaysCategoryCount,
+      limit,
+    });
+  }
+
   const payload = ranked.map((meal) => ({
     ...meal,
     tags: JSON.parse(meal.tags),
@@ -156,3 +177,23 @@ export async function GET(request: Request) {
 
   return NextResponse.json(payload);
 }
+  const optionalFilterKeys: Array<keyof ActiveFilters> = [
+    "underTwentyMin",
+    "underThirtyMin",
+    "highProtein",
+    "preWorkout",
+    "budget",
+    "underFiveHundredKcal",
+    "vegetarianOnly",
+    "veganOnly",
+    "glutenFreeOnly",
+    "dairyFreeOnly",
+    "nutFreeOnly",
+    "lowCarb",
+    "highFiber",
+  ];
+
+  const hasOptionalFilters = optionalFilterKeys.some((key) => filters[key]);
+  if (filters.fridgeOnly && fridgeItems.length === 0 && !hasOptionalFilters) {
+    filters = { ...filters, fridgeOnly: false, noConstraints: true };
+  }

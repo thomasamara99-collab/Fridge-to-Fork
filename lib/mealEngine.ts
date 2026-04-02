@@ -96,10 +96,6 @@ const passesHardFilters = (
   const tags = jsonArray<string[]>(meal.tags, []);
   const ingredients = jsonArray<{ name: string }[]>(meal.ingredients, []);
 
-  if (filters.noConstraints) {
-    return { ok: true, tags, ingredients };
-  }
-
   if (dietaryFilters.includes("vegetarian") && !meal.isVegetarian) {
     return { ok: false, tags, ingredients };
   }
@@ -150,25 +146,25 @@ const passesHardFilters = (
   }
 
   const totalMinutes = meal.prepMinutes + meal.cookMinutes;
-  if (filters.underTwentyMin && totalMinutes > 20) {
+  if (!filters.noConstraints && filters.underTwentyMin && totalMinutes > 20) {
     return { ok: false, tags, ingredients };
   }
-  if (filters.underThirtyMin && totalMinutes > 30) {
+  if (!filters.noConstraints && filters.underThirtyMin && totalMinutes > 30) {
     return { ok: false, tags, ingredients };
   }
-  if (filters.underFiveHundredKcal && meal.calories > 520) {
+  if (!filters.noConstraints && filters.underFiveHundredKcal && meal.calories > 520) {
     return { ok: false, tags, ingredients };
   }
-  if (filters.lowCarb && meal.carbs > 35) {
+  if (!filters.noConstraints && filters.lowCarb && meal.carbs > 35) {
     return { ok: false, tags, ingredients };
   }
-  if (filters.highFiber && meal.fibre < 8) {
+  if (!filters.noConstraints && filters.highFiber && meal.fibre < 8) {
     return { ok: false, tags, ingredients };
   }
-  if (filters.budget && !tags.includes("budget")) {
+  if (!filters.noConstraints && filters.budget && !tags.includes("budget")) {
     return { ok: false, tags, ingredients };
   }
-  if (profile.cookingSkill === "beginner" && meal.difficulty === 3) {
+  if (!filters.noConstraints && profile.cookingSkill === "beginner" && meal.difficulty === 3) {
     return { ok: false, tags, ingredients };
   }
 
