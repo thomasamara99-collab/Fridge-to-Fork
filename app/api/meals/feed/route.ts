@@ -131,6 +131,27 @@ export async function GET(request: Request) {
     {},
   );
 
+  const optionalFilterKeys: Array<keyof ActiveFilters> = [
+    "underTwentyMin",
+    "underThirtyMin",
+    "highProtein",
+    "preWorkout",
+    "budget",
+    "underFiveHundredKcal",
+    "vegetarianOnly",
+    "veganOnly",
+    "glutenFreeOnly",
+    "dairyFreeOnly",
+    "nutFreeOnly",
+    "lowCarb",
+    "highFiber",
+  ];
+
+  const hasOptionalFilters = optionalFilterKeys.some((key) => filters[key]);
+  if (filters.fridgeOnly && fridgeItems.length === 0 && !hasOptionalFilters) {
+    filters = { ...filters, fridgeOnly: false, noConstraints: true };
+  }
+
   let ranked = await getRankedMeals({
     meals,
     profile,
@@ -177,23 +198,3 @@ export async function GET(request: Request) {
 
   return NextResponse.json(payload);
 }
-  const optionalFilterKeys: Array<keyof ActiveFilters> = [
-    "underTwentyMin",
-    "underThirtyMin",
-    "highProtein",
-    "preWorkout",
-    "budget",
-    "underFiveHundredKcal",
-    "vegetarianOnly",
-    "veganOnly",
-    "glutenFreeOnly",
-    "dairyFreeOnly",
-    "nutFreeOnly",
-    "lowCarb",
-    "highFiber",
-  ];
-
-  const hasOptionalFilters = optionalFilterKeys.some((key) => filters[key]);
-  if (filters.fridgeOnly && fridgeItems.length === 0 && !hasOptionalFilters) {
-    filters = { ...filters, fridgeOnly: false, noConstraints: true };
-  }
