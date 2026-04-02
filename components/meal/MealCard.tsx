@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 
 import TagChip from "../ui/TagChip";
@@ -14,11 +17,12 @@ const themeColors: Record<string, string> = {
 export default function MealCard({ meal }: { meal: MealFeedItem }) {
   const totalMinutes = meal.prepMinutes + meal.cookMinutes;
   const tags = meal.computedTags.length ? meal.computedTags : meal.tags;
+  const [imageFailed, setImageFailed] = useState(false);
 
   return (
     <div className="relative overflow-hidden rounded-card border border-border bg-surface shadow-[0_2px_12px_rgba(0,0,0,0.06),_0_0_0_0.5px_rgba(0,0,0,0.04)]">
       <div className="relative h-[240px] w-full">
-        {meal.photoPath ? (
+        {meal.photoPath && !imageFailed ? (
           <Image
             src={meal.photoPath}
             alt={meal.name}
@@ -26,6 +30,7 @@ export default function MealCard({ meal }: { meal: MealFeedItem }) {
             className="object-cover"
             sizes="(max-width: 768px) 100vw, 360px"
             priority
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <div
