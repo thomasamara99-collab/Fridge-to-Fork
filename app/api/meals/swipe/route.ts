@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 import { auth } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
@@ -22,13 +23,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid swipe data." }, { status: 400 });
   }
 
-  await prisma.swipe.create({
-    data: {
-      userId: session.user.id,
-      mealId: parsed.data.mealId,
-      direction: parsed.data.direction,
-    },
-  });
+  const operations: Prisma.PrismaPromise<unknown>[] = [
+    prisma.swipe.create({
+      data: {
+        userId: session.user.id,
+        mealId: parsed.data.mealId,
+        direction: parsed.data.direction,
+      },
+    }),
+  ];
+
+  if (parsed.data.direction === "right") {
+    operations.push(
+      prisma.savedMeal.upsert({
+        where: {
+          userId_mealId: {
+            userId: session.user.id,
+            mealId: parsed.data.mealId,
+          },
+        },
+        update: { savedAt: new Date() },
+        create: {
+          userId: session.user.id,
+          mealId: parsed.data.mealId,
+        },
+      }),
+    );
+  }
+
+  await prisma.$transaction(operations);
 
   return NextResponse.json({ ok: true });
 }

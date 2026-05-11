@@ -17,6 +17,8 @@ model User {
   fridgeItems  FridgeItem[]
   logs         DailyLog[]
   swipes       Swipe[]
+  savedMeals   SavedMeal[]
+  weightLogs   WeightEntry[]
   customMeals  Meal[]       @relation("UserMeals")
   foodItems    FoodItem[]   @relation("UserFoods")
   sessions     Session[]
@@ -99,6 +101,7 @@ model Meal {
 
   createdAt   DateTime @default(now())
   swipes      Swipe[]
+  savedBy     SavedMeal[]
   loggedMeals LoggedMeal[]
 }
 
@@ -147,6 +150,28 @@ model Swipe {
   meal      Meal     @relation(fields: [mealId], references: [id])
   direction String
   swipedAt  DateTime @default(now())
+}
+
+model SavedMeal {
+  id        String   @id @default(cuid())
+  userId    String
+  mealId    String
+  user      User     @relation(fields: [userId], references: [id])
+  meal      Meal     @relation(fields: [mealId], references: [id])
+  savedAt   DateTime @default(now())
+
+  @@unique([userId, mealId])
+  @@index([userId, savedAt])
+}
+
+model WeightEntry {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  weightKg    Float
+  recordedAt  DateTime @default(now())
+
+  @@index([userId, recordedAt])
 }
 
 model FoodItem {

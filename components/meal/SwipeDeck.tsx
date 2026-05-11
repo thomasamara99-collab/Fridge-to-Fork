@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -132,7 +132,7 @@ export default function SwipeDeck({
               className={`${overlayBadgeClass} left-5 -rotate-12 border-green text-green`}
               style={{ opacity: rightBadge }}
             >
-              Cook this 🍳
+                            Save meal
             </motion.div>
             <motion.div
               className={`${overlayBadgeClass} right-5 rotate-12 border-border-strong text-text-secondary`}

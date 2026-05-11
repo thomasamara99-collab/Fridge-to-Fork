@@ -136,6 +136,24 @@ export type LoggedMeal = {
   loggedAt: string;
 };
 
+export type SavedMealItem = {
+  id: string;
+  mealId: string;
+  savedAt: string;
+  meal: {
+    id: string;
+    name: string;
+    description: string;
+    photoPath: string | null;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    prepMinutes: number;
+    cookMinutes: number;
+  };
+};
+
 export type TodayLog = {
   id?: string;
   calories: number;
@@ -149,4 +167,21 @@ export type SwipeRecord = {
   mealId: string;
   direction: "left" | "right";
   swipedAt: Date;
+};
+
+export type LogHistoryDay = {
+  id: string;
+  date: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  meals: LoggedMeal[];
+};
+
+export type LogStats = {
+  streakDays: number;
+  longestStreak: number;
+  trackedDays: number;
+  recentWeights: Array<{ id: string; weightKg: number; recordedAt: string }>;
 };

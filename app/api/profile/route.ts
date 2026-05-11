@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { auth } from "../../../lib/auth";
 import { prisma } from "../../../lib/prisma";
+import { calculateTDEE } from "../../../lib/nutrition";
 
 const profileSchema = z.object({
   weightKg: z.number().min(30).max(250),
@@ -60,12 +61,20 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Invalid profile data." }, { status: 400 });
     }
 
-    const profile = await prisma.profile.create({
-      data: {
-        ...parsed.data,
-        userId: session.user.id,
-      },
-    });
+    const [profile] = await prisma.$transaction([
+      prisma.profile.create({
+        data: {
+          ...parsed.data,
+          userId: session.user.id,
+        },
+      }),
+      prisma.weightEntry.create({
+        data: {
+          userId: session.user.id,
+          weightKg: parsed.data.weightKg,
+        },
+      }),
+    ]);
 
     return NextResponse.json(profile);
   }
@@ -75,10 +84,35 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Invalid profile update." }, { status: 400 });
   }
 
-  const updated = await prisma.profile.update({
-    where: { userId: session.user.id },
-    data: parsed.data,
-  });
+  const updateData = { ...parsed.data };
+  const nextWeight = parsed.data.weightKg;
+  if (nextWeight && Math.abs(nextWeight - existing.weightKg) >= 0.05) {
+    const recalculated = calculateTDEE({
+      weightKg: nextWeight,
+      heightCm: existing.heightCm,
+      age: existing.age,
+      sex: existing.sex,
+      activityLevel: existing.activityLevel,
+    });
+    updateData.calculatedTdee = recalculated;
+  }
+
+  const [updated] = await prisma.$transaction([
+    prisma.profile.update({
+      where: { userId: session.user.id },
+      data: updateData,
+    }),
+    ...(nextWeight && Math.abs(nextWeight - existing.weightKg) >= 0.05
+      ? [
+          prisma.weightEntry.create({
+            data: {
+              userId: session.user.id,
+              weightKg: nextWeight,
+            },
+          }),
+        ]
+      : []),
+  ]);
 
   return NextResponse.json(updated);
 }

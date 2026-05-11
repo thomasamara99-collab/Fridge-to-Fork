@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 
 import MacroRing from "../../../components/ui/MacroRing";
 import ProgressBar from "../../../components/ui/ProgressBar";
 import { useTodayLog } from "../../../hooks/useTodayLog";
 import { useProfile } from "../../../hooks/useProfile";
+import { useSavedMeals } from "../../../hooks/useSavedMeals";
 import type { LoggedMeal, TodayLog } from "../../../types";
 
 type BarcodeDetectorConstructor = new (options?: {
@@ -24,7 +26,7 @@ declare global {
 const getRemainingMessage = (remaining: number) => {
   const hour = new Date().getHours();
   if (remaining < 0) return "You've gone over today. Easy tomorrow morning.";
-  if (remaining < 200) return "Nearly there — a light snack at most.";
+  if (remaining < 200) return "Nearly there - a light snack at most.";
   if (remaining > 800 && hour >= 18) {
     return "You've got room for a solid dinner.";
   }
@@ -34,6 +36,7 @@ const getRemainingMessage = (remaining: number) => {
 export default function LogPage() {
   const { data: profile } = useProfile();
   const { data: log, isLoading } = useTodayLog();
+  const { data: savedMeals, isLoading: isLoadingSaved } = useSavedMeals();
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState<string | null>(null);
   const [quickName, setQuickName] = useState("");
@@ -317,9 +320,33 @@ export default function LogPage() {
     }
   };
 
+  const logSavedMeal = async (savedMealId: string) => {
+    const response = await fetch("/api/meals/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ savedMealId }),
+    });
+
+    if (!response.ok) {
+      setQuickError("Could not log saved meal. Please try again.");
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["log", "today"] });
+    queryClient.invalidateQueries({ queryKey: ["saved-meals"] });
+  };
+
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 pb-24 pt-8">
-      <h1 className="font-display text-3xl text-text-primary">Today&apos;s log</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="font-display text-3xl text-text-primary">Today&apos;s log</h1>
+        <Link
+          href="/history"
+          className="rounded-full border border-border bg-surface-2 px-3 py-1 text-xs text-text-secondary"
+        >
+          History
+        </Link>
+      </div>
 
       <section className="rounded-card border border-border bg-surface p-5">
         <div className="flex items-center gap-6">
@@ -485,6 +512,46 @@ export default function LogPage() {
       </section>
 
       <section className="space-y-3">
+        <h2 className="text-sm font-medium text-text-primary">Saved meals</h2>
+        {isLoadingSaved ? (
+          <div className="rounded-card border border-border bg-surface-2 p-4 text-sm text-text-tertiary">
+            Loading saved meals...
+          </div>
+        ) : savedMeals?.length ? (
+          <div className="space-y-3">
+            {savedMeals.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between rounded-card border border-border bg-surface p-4"
+              >
+                <div>
+                  <p className="text-sm font-medium text-text-primary">
+                    {item.meal.name}
+                  </p>
+                  <p className="text-xs text-text-tertiary">
+                    {item.meal.calories} kcal - {item.meal.protein}g protein
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void logSavedMeal(item.id);
+                  }}
+                  className="rounded-full bg-accent px-3 py-1 text-xs text-white"
+                >
+                  Log now
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-card border border-dashed border-border bg-surface-2 p-4 text-sm text-text-tertiary">
+            No saved meals yet. Swipe right to save ideas first.
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-3">
         <h2 className="text-sm font-medium text-text-primary">Meals logged</h2>
         {isLoading ? (
           <div className="rounded-card border border-border bg-surface-2 p-4 text-sm text-text-tertiary">
@@ -531,7 +598,7 @@ export default function LogPage() {
           </div>
         ) : (
           <div className="rounded-card border border-dashed border-border bg-surface-2 p-4 text-sm text-text-tertiary">
-            No meals logged yet. Swipe right to add one.
+            No meals logged yet. Use quick add or log from Saved meals.
           </div>
         )}
       </section>

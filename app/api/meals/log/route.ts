@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 import { auth } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
 
 const logSchema = z.object({
   mealId: z.string().optional(),
+  savedMealId: z.string().optional(),
   mealName: z.string().optional(),
   calories: z.number().int().min(0).optional(),
   protein: z.number().int().min(0).optional(),
@@ -26,11 +28,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const { mealId } = parsed.data;
-  const meal =
-    mealId ?
-      await prisma.meal.findUnique({ where: { id: mealId } }) :
+  const { mealId, savedMealId } = parsed.data;
+
+  const savedMeal =
+    savedMealId ?
+      await prisma.savedMeal.findUnique({
+        where: { id: savedMealId },
+        include: { meal: true },
+      }) :
       null;
+
+  if (savedMealId && (!savedMeal || savedMeal.userId !== session.user.id)) {
+    return NextResponse.json({ error: "Saved meal not found." }, { status: 404 });
+  }
+
+  const meal =
+    savedMeal?.meal ??
+    (mealId ? await prisma.meal.findUnique({ where: { id: mealId } }) : null);
 
   const mealName =
     meal?.name ?? parsed.data.mealName ?? "Custom meal";
@@ -58,7 +72,7 @@ export async function POST(request: Request) {
       data: { userId: session.user.id },
     }));
 
-  await prisma.$transaction([
+  const operations: Prisma.PrismaPromise<unknown>[] = [
     prisma.loggedMeal.create({
       data: {
         logId: log.id,
@@ -79,7 +93,22 @@ export async function POST(request: Request) {
         fat: { increment: fat },
       },
     }),
-  ]);
+  ];
+
+  if (savedMeal) {
+    operations.push(
+      prisma.savedMeal.delete({
+        where: {
+          userId_mealId: {
+            userId: session.user.id,
+            mealId: savedMeal.mealId,
+          },
+        },
+      }),
+    );
+  }
+
+  await prisma.$transaction(operations);
 
   return NextResponse.json({ ok: true });
 }

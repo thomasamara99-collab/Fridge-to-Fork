@@ -10,7 +10,8 @@ import { useSwipeDeck } from "../../../hooks/useSwipeDeck";
 import { useTodayLog } from "../../../hooks/useTodayLog";
 import { useProfile } from "../../../hooks/useProfile";
 import { fetchMealFeed } from "../../../hooks/useMealFeed";
-import type { MealFeedItem, TodayLog } from "../../../types";
+import type { MealFeedItem } from "../../../types";
+import Link from "next/link";
 
 export default function SwipePage() {
   const router = useRouter();
@@ -59,39 +60,6 @@ export default function SwipePage() {
   const handleSwipe = async (meal: MealFeedItem, direction: "left" | "right") => {
     shiftDeck();
 
-    if (direction === "right") {
-      queryClient.setQueryData<TodayLog>(["log", "today"], (current) => {
-        const base = current ?? {
-          calories: 0,
-          protein: 0,
-          carbs: 0,
-          fat: 0,
-          meals: [],
-        };
-
-        return {
-          ...base,
-          calories: base.calories + meal.calories,
-          protein: base.protein + meal.protein,
-          carbs: base.carbs + meal.carbs,
-          fat: base.fat + meal.fat,
-          meals: [
-            {
-              id: `optimistic-${meal.id}`,
-              mealId: meal.id,
-              mealName: meal.name,
-              calories: meal.calories,
-              protein: meal.protein,
-              carbs: meal.carbs,
-              fat: meal.fat,
-              loggedAt: new Date().toISOString(),
-            },
-            ...(base.meals ?? []),
-          ],
-        };
-      });
-    }
-
     const swipeBody = JSON.stringify({ mealId: meal.id, direction });
     const swipeRequest = fetch("/api/meals/swipe", {
       method: "POST",
@@ -99,16 +67,8 @@ export default function SwipePage() {
       body: swipeBody,
     });
 
-    const logRequest =
-      direction === "right"
-        ? fetch("/api/meals/log", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mealId: meal.id }),
-          })
-        : Promise.resolve();
-
-    await Promise.all([swipeRequest, logRequest]);
+    await swipeRequest;
+    queryClient.invalidateQueries({ queryKey: ["saved-meals"] });
 
     const remainingCount = Math.max(deck.length - 1, 0);
     if (remainingCount <= 2 && !isPrefetching) {
@@ -146,9 +106,17 @@ export default function SwipePage() {
         <p className="text-xs uppercase tracking-wide text-text-tertiary">
           {dateLabel}
         </p>
-        <h1 className="font-display text-3xl text-text-primary">
-          Ready to cook?
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-3xl text-text-primary">
+            Ready to cook?
+          </h1>
+          <Link
+            href="/saved"
+            className="rounded-full border border-border bg-surface-2 px-3 py-1 text-xs text-text-secondary"
+          >
+            Saved meals
+          </Link>
+        </div>
       </header>
 
       <section className="flex justify-between rounded-card border border-border bg-surface px-4 py-4 shadow-[0_2px_12px_rgba(0,0,0,0.06),_0_0_0_0.5px_rgba(0,0,0,0.04)]">
@@ -247,7 +215,7 @@ export default function SwipePage() {
           onClick={() => setPendingSwipe("right")}
           disabled={!deck.length}
         >
-          Cook
+          Save
         </button>
       </section>
     </main>
