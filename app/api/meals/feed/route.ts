@@ -4,6 +4,7 @@ import { auth } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
 import { getRankedMeals } from "../../../../lib/mealEngine";
 import { ensureBaseMeals } from "../../../../lib/baseMeals";
+import { ensureThemealDbMeals } from "../../../../lib/themealdb";
 import type { ActiveFilters } from "../../../../types";
 
 const parseFilters = (raw: string | null): ActiveFilters => {
@@ -85,6 +86,7 @@ export async function GET(request: Request) {
   const limit = Number(searchParams.get("limit") ?? "5");
 
   await ensureBaseMeals(prisma);
+  await ensureThemealDbMeals(prisma, { minimumCount: 24, batchSize: 8 });
 
   const [profile, fridgeItems, meals] = await Promise.all([
     prisma.profile.findUnique({ where: { userId: session.user.id } }),
