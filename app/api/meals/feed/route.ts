@@ -90,7 +90,9 @@ export async function GET(request: Request) {
     .filter(Boolean);
 
   await ensureBaseMeals(prisma);
-  await ensureThemealDbMeals(prisma, { minimumCount: 36, batchSize: 10 });
+  void ensureThemealDbMeals(prisma, { minimumCount: 36, batchSize: 10 }).catch(
+    () => undefined,
+  );
 
   const [profile, fridgeItems, meals] = await Promise.all([
     prisma.profile.findUnique({ where: { userId: session.user.id } }),

@@ -128,6 +128,46 @@ const buildMealRecordFromGenerated = (meal: MealData) => ({
   createdBy: null,
 });
 
+const emergencyGeneratedMeal = (profile: ProfileRecord): MealData => ({
+  name: "Pan-seared chicken and rice",
+  description: "Simple fallback meal with balanced macros",
+  emoji: "🍽️",
+  category: "protein",
+  colorTheme: "coral",
+  calories: Math.max(320, Math.min(620, Math.round(profile.targetCalories * 0.3))),
+  protein: Math.max(22, Math.min(48, Math.round(profile.targetProtein * 0.3))),
+  carbs: Math.max(24, Math.min(72, Math.round(profile.targetCarbs * 0.3))),
+  fat: Math.max(8, Math.min(28, Math.round(profile.targetFat * 0.28))),
+  fibre: 4,
+  satiating: 4,
+  prepMinutes: 8,
+  cookMinutes: 14,
+  difficulty: 1,
+  tags: ["high protein", "quick", "fallback"],
+  ingredients: [
+    { name: "Chicken breast", amount: "140g", category: "protein" },
+    { name: "Rice", amount: "80g dry", category: "carb" },
+    { name: "Mixed vegetables", amount: "150g", category: "veg" },
+    { name: "Olive oil", amount: "1 tsp", category: "fat" },
+  ],
+  steps: [
+    "Cook rice according to pack instructions.",
+    "Season and pan-sear chicken until cooked through.",
+    "Cook vegetables in the same pan for 4 to 5 minutes.",
+    "Serve together and season to taste.",
+  ],
+  tools: ["Pan", "Pot", "Knife"],
+  allergens: [],
+  photoPaths: [],
+  isVegetarian: false,
+  isVegan: false,
+  isGlutenFree: true,
+  isDairyFree: true,
+  isHalal: true,
+  isKosher: false,
+  isNutFree: true,
+});
+
 const passesHardFilters = (
   meal: MealRecord,
   profile: ProfileRecord,
@@ -355,6 +395,8 @@ export async function getRankedMeals(input: MealEngineInput): Promise<MealMatch[
     }
   }
 
+  let workingMeals = hardFiltered;
+
   if (hardFiltered.length < 2) {
     const remainingCalories =
       input.profile.targetCalories - input.todayLog.calories;
@@ -363,21 +405,26 @@ export async function getRankedMeals(input: MealEngineInput): Promise<MealMatch[
     const remainingCarbs = input.profile.targetCarbs - input.todayLog.carbs;
     const remainingFat = input.profile.targetFat - input.todayLog.fat;
 
-    const fallbackMeals = await generateFallbackMeals({
-      remainingCalories,
-      remainingProtein,
-      remainingCarbs,
-      remainingFat,
-      fridgeItems: input.fridgeItems.map((item) => item.name),
-      dietaryFilters: jsonArray<string[]>(input.profile.dietaryFilters, []),
-      dislikedIngredients: jsonArray<string[]>(
-        input.profile.dislikedIngredients,
-        [],
-      ),
-      filters: input.filters,
-      hungerLevel: input.hungerLevel,
-      count: 3,
-    });
+    let fallbackMeals: MealData[] = [];
+    try {
+      fallbackMeals = await generateFallbackMeals({
+        remainingCalories,
+        remainingProtein,
+        remainingCarbs,
+        remainingFat,
+        fridgeItems: input.fridgeItems.map((item) => item.name),
+        dietaryFilters: jsonArray<string[]>(input.profile.dietaryFilters, []),
+        dislikedIngredients: jsonArray<string[]>(
+          input.profile.dislikedIngredients,
+          [],
+        ),
+        filters: input.filters,
+        hungerLevel: input.hungerLevel,
+        count: 3,
+      });
+    } catch {
+      fallbackMeals = [emergencyGeneratedMeal(input.profile)];
+    }
 
     const created = await Promise.all(
       fallbackMeals.map((meal) =>
@@ -387,8 +434,43 @@ export async function getRankedMeals(input: MealEngineInput): Promise<MealMatch[
       ),
     );
 
-    return scoreMeals(created, input).slice(0, input.limit ?? 12);
+    workingMeals = [...hardFiltered, ...created];
   }
 
-  return scoreMeals(hardFiltered, input).slice(0, input.limit ?? 12);
+  const primaryRanked = scoreMeals(workingMeals, input).slice(0, input.limit ?? 12);
+  if (primaryRanked.length > 0) {
+    return primaryRanked;
+  }
+
+  const relaxedFilters = {
+    ...input.filters,
+    noConstraints: true,
+    fridgeOnly: false,
+  };
+
+  const relaxedMeals = scoreMeals(input.meals, {
+    ...input,
+    filters: relaxedFilters,
+    swipes: [],
+    excludedMealIds: [],
+  }).slice(0, input.limit ?? 12);
+
+  if (relaxedMeals.length > 0) {
+    return relaxedMeals;
+  }
+
+  const leaderboard = input.meals
+    .slice()
+    .sort((a, b) => b.protein + b.calories * 0.01 - (a.protein + a.calories * 0.01))
+    .slice(0, input.limit ?? 12)
+    .map((meal) => ({
+      ...meal,
+      matchScore: 65,
+      computedTags: [],
+      fridgeScore: 20,
+      macroScore: 20,
+      contextScore: 5,
+    }));
+
+  return leaderboard;
 }
