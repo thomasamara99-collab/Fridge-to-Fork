@@ -8,19 +8,6 @@ import { z } from "zod";
 
 import PhotoUpload from "../../../../components/meal/PhotoUpload";
 
-const tagOptions = [
-  "budget",
-  "high protein",
-  "quick",
-  "meal prep",
-  "pre-workout",
-  "breakfast",
-  "vegetarian",
-  "vegan",
-  "gluten-free",
-  "dairy-free",
-] as const;
-
 const allergenOptions = [
   "gluten",
   "dairy",
@@ -69,11 +56,14 @@ type FormValues = z.infer<typeof schema>;
 type MealCategory = "breakfast" | "protein" | "veggie" | "carbs" | "light" | "snack";
 type MealTheme = "amber" | "coral" | "green" | "teal" | "blue";
 
-const deriveCategory = (tags: string[]): MealCategory => {
-  if (tags.includes("breakfast")) return "breakfast";
-  if (tags.includes("vegetarian") || tags.includes("vegan")) return "veggie";
-  if (tags.includes("high protein")) return "protein";
-  if (tags.includes("pre-workout")) return "carbs";
+const deriveCategory = (data: Pick<FormValues, "name" | "protein" | "carbs" | "isVegetarian" | "isVegan">): MealCategory => {
+  const lowerName = data.name.toLowerCase();
+  if (lowerName.includes("breakfast") || lowerName.includes("omelette") || lowerName.includes("eggs")) {
+    return "breakfast";
+  }
+  if (data.isVegan || data.isVegetarian) return "veggie";
+  if (data.protein >= 30) return "protein";
+  if (data.carbs >= 55) return "carbs";
   return "light";
 };
 
@@ -92,6 +82,24 @@ const deriveTheme = (category: MealCategory): MealTheme => {
     default:
       return "amber";
   }
+};
+
+const deriveAutoTags = (data: FormValues, totalMinutes: number): string[] => {
+  const tags = new Set<string>(["community", "user-created"]);
+
+  if (data.protein >= 30) tags.add("high protein");
+  if (totalMinutes <= 20) tags.add("quick");
+  if (data.calories <= 520) tags.add("under 500 kcal");
+  if (data.isVegetarian) tags.add("vegetarian");
+  if (data.isVegan) tags.add("vegan");
+  if (data.isGlutenFree) tags.add("gluten-free");
+  if (data.isDairyFree) tags.add("dairy-free");
+  if (data.carbs >= 55) tags.add("pre-workout");
+  if (data.name.toLowerCase().includes("breakfast") || data.name.toLowerCase().includes("egg")) {
+    tags.add("breakfast");
+  }
+
+  return Array.from(tags);
 };
 
 export default function AddMealPage() {
@@ -159,7 +167,6 @@ export default function AddMealPage() {
       name: "tools",
     });
 
-  const selectedTags = watch("tags");
   const selectedAllergens = watch("allergens");
   const selectedDifficulty = watch("difficulty");
   const calories = watch("calories") ?? 0;
@@ -173,13 +180,6 @@ export default function AddMealPage() {
   );
   const macroDelta = Math.abs(macroCalories - calories);
   const macroMatches = calories > 0 && macroDelta <= 50;
-
-  const toggleTag = (tag: string) => {
-    const next = selectedTags.includes(tag)
-      ? selectedTags.filter((item) => item !== tag)
-      : [...selectedTags, tag];
-    setValue("tags", next, { shouldDirty: true });
-  };
 
   const toggleAllergen = (allergen: string) => {
     const next = selectedAllergens.includes(allergen)
@@ -227,7 +227,9 @@ export default function AddMealPage() {
     const formData = new FormData();
     formData.append("name", data.name);
     if (data.description) formData.append("description", data.description);
-    const inferredCategory = deriveCategory(data.tags);
+    const totalMinutes = data.prepMinutes + data.cookMinutes;
+    const autoTags = deriveAutoTags(data, totalMinutes);
+    const inferredCategory = deriveCategory(data);
     const inferredTheme = deriveTheme(inferredCategory);
 
     formData.append("emoji", "🍽️");
@@ -242,7 +244,7 @@ export default function AddMealPage() {
     formData.append("prepMinutes", String(data.prepMinutes));
     formData.append("cookMinutes", String(data.cookMinutes));
     formData.append("difficulty", String(data.difficulty));
-    formData.append("tags", JSON.stringify(data.tags));
+    formData.append("tags", JSON.stringify(autoTags));
     formData.append("ingredients", JSON.stringify(data.ingredients));
     formData.append(
       "steps",
@@ -367,9 +369,6 @@ export default function AddMealPage() {
       if (typeof result.difficulty === "number") {
         const level = Math.min(3, Math.max(1, Math.round(result.difficulty)));
         setValue("difficulty", level as 1 | 2 | 3, { shouldDirty: true });
-      }
-      if (Array.isArray(result.tags)) {
-        setValue("tags", result.tags, { shouldDirty: true });
       }
       if (Array.isArray(result.ingredients) && result.ingredients.length) {
         setValue(
@@ -850,31 +849,6 @@ export default function AddMealPage() {
                 Add at least one step.
               </p>
             ) : null}
-          </div>
-        </section>
-
-        <section className="rounded-card border border-border bg-surface p-4">
-          <p className="text-xs uppercase tracking-wide text-text-tertiary">
-            Tags
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {tagOptions.map((tag) => {
-              const active = selectedTags.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => toggleTag(tag)}
-                  className={`rounded-full border px-3 py-1 text-xs ${
-                    active
-                      ? "border-accent bg-accent-light text-accent-text"
-                      : "border-border bg-surface text-text-secondary"
-                  }`}
-                >
-                  {tag}
-                </button>
-              );
-            })}
           </div>
         </section>
 

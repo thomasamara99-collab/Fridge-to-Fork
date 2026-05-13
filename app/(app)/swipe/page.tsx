@@ -32,6 +32,7 @@ export default function SwipePage() {
     null,
   );
   const [isPrefetching, setIsPrefetching] = useState(false);
+  const [isCooking, setIsCooking] = useState(false);
 
   const dateLabel = useMemo(
     () =>
@@ -61,24 +62,63 @@ export default function SwipePage() {
     shiftDeck();
 
     const swipeBody = JSON.stringify({ mealId: meal.id, direction });
-    const swipeRequest = fetch("/api/meals/swipe", {
+    const swipeResponse = await fetch("/api/meals/swipe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: swipeBody,
     });
 
-    await swipeRequest;
+    if (direction === "right" && !swipeResponse.ok) {
+      await fetch("/api/meals/saved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mealId: meal.id }),
+      });
+    }
+
     queryClient.invalidateQueries({ queryKey: ["saved-meals"] });
 
     const remainingCount = Math.max(deck.length - 1, 0);
     if (remainingCount <= 2 && !isPrefetching) {
       setIsPrefetching(true);
       try {
-        const more = await fetchMealFeed(filters, hungerLevel, 5);
+        const excludedIds = Array.from(new Set(deck.map((item) => item.id)));
+        const more = await fetchMealFeed(filters, hungerLevel, 12, excludedIds);
         appendDeck(more);
       } finally {
         setIsPrefetching(false);
       }
+    }
+  };
+
+  const cookCurrentMeal = async () => {
+    if (!frontMeal || isCooking) return;
+
+    setIsCooking(true);
+    try {
+      const response = await fetch("/api/meals/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mealId: frontMeal.id }),
+      });
+
+      if (response.ok) {
+        await fetch("/api/meals/swipe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mealId: frontMeal.id,
+            direction: "right",
+            save: false,
+          }),
+        });
+        queryClient.invalidateQueries({ queryKey: ["log", "today"] });
+        queryClient.invalidateQueries({ queryKey: ["saved-meals"] });
+        queryClient.invalidateQueries({ queryKey: ["meal-feed"] });
+        shiftDeck();
+      }
+    } finally {
+      setIsCooking(false);
     }
   };
 
@@ -216,6 +256,15 @@ export default function SwipePage() {
           disabled={!deck.length}
         >
           Save
+        </button>
+        <button
+          className="rounded-full border border-green bg-green-light px-4 py-3 text-xs font-semibold text-green-text disabled:opacity-60"
+          onClick={() => {
+            void cookCurrentMeal();
+          }}
+          disabled={!frontMeal || isCooking}
+        >
+          {isCooking ? "Cooking..." : "Cook"}
         </button>
       </section>
     </main>

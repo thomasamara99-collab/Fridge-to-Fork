@@ -22,6 +22,7 @@ type MealEngineInput = {
   hungerLevel: number;
   swipes: SwipeRecord[];
   todaysCategoryCount: Record<string, number>;
+  excludedMealIds?: string[];
   limit?: number;
 };
 
@@ -56,6 +57,47 @@ const wasRecentlySwiped = (swipes: SwipeRecord[], mealId: string) => {
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
+
+const scoreTotal = (meal: Pick<MealMatch, "fridgeScore" | "macroScore" | "contextScore">) =>
+  meal.fridgeScore + meal.macroScore + meal.contextScore;
+
+const pickIntelligently = (ranked: MealMatch[], limit: number): MealMatch[] => {
+  if (ranked.length <= limit) return ranked;
+
+  const sorted = [...ranked].sort((a, b) => scoreTotal(b) - scoreTotal(a));
+  const candidatePoolSize = Math.min(sorted.length, Math.max(limit * 4, 24));
+  const pool = sorted.slice(0, candidatePoolSize);
+  const selected: MealMatch[] = [];
+  const selectedCategoryCount: Record<string, number> = {};
+
+  while (selected.length < limit && pool.length) {
+    const weights = pool.map((meal, index) => {
+      const base = Math.max(1, scoreTotal(meal));
+      const rankingBoost = (candidatePoolSize - index) * 0.45;
+      const diversityPenalty = (selectedCategoryCount[meal.category] ?? 0) * 7;
+      return Math.max(0.2, base + rankingBoost - diversityPenalty);
+    });
+
+    const totalWeight = weights.reduce((sum, value) => sum + value, 0);
+    let draw = Math.random() * totalWeight;
+    let pickedIndex = 0;
+
+    for (let index = 0; index < weights.length; index += 1) {
+      draw -= weights[index];
+      if (draw <= 0) {
+        pickedIndex = index;
+        break;
+      }
+    }
+
+    const [picked] = pool.splice(pickedIndex, 1);
+    selected.push(picked);
+    selectedCategoryCount[picked.category] =
+      (selectedCategoryCount[picked.category] ?? 0) + 1;
+  }
+
+  return selected;
+};
 
 const buildMealRecordFromGenerated = (meal: MealData) => ({
   name: meal.name,
@@ -180,8 +222,13 @@ const scoreMeals = (
   const todayIsTrainingDay = isTrainingDay(trainingDays);
 
   const scored: MealMatch[] = [];
+  const excludedMealIds = new Set(input.excludedMealIds ?? []);
 
   for (const meal of meals) {
+    if (excludedMealIds.has(meal.id)) {
+      continue;
+    }
+
     const tags = jsonArray<string[]>(meal.tags, []);
     const ingredients = jsonArray<{ name: string }[]>(meal.ingredients, []);
     const totalIngredients = ingredients.length;
@@ -206,6 +253,8 @@ const scoreMeals = (
       input.profile.targetCalories - input.todayLog.calories;
     const remainingProtein =
       input.profile.targetProtein - input.todayLog.protein;
+    const remainingCarbs = input.profile.targetCarbs - input.todayLog.carbs;
+    const remainingFat = input.profile.targetFat - input.todayLog.fat;
 
     if (!input.filters.noConstraints && remainingCalories < 300 && meal.calories > 400) {
       continue;
@@ -228,7 +277,19 @@ const scoreMeals = (
         ? 0
         : Math.max(0, 15 - (proteinDiff / Math.max(idealProtein, 1)) * 15);
 
-    const macroScore = Math.round(calorieScore + proteinScore);
+    const idealCarbs = remainingCarbs * hungerMultiplier;
+    const carbsDiff = Math.abs(meal.carbs - idealCarbs);
+    const carbsScore =
+      idealCarbs <= 0
+        ? 0
+        : Math.max(0, 6 - (carbsDiff / Math.max(idealCarbs, 1)) * 6);
+
+    const idealFat = remainingFat * hungerMultiplier;
+    const fatDiff = Math.abs(meal.fat - idealFat);
+    const fatScore =
+      idealFat <= 0 ? 0 : Math.max(0, 4 - (fatDiff / Math.max(idealFat, 1)) * 4);
+
+    const macroScore = Math.round(calorieScore + proteinScore + carbsScore + fatScore);
 
     let contextScore = 0;
     if (todayIsTrainingDay && tags.includes("pre-workout")) {
@@ -280,11 +341,8 @@ const scoreMeals = (
     });
   }
 
-  return scored.sort(
-    (a, b) =>
-      b.fridgeScore + b.macroScore + b.contextScore -
-      (a.fridgeScore + a.macroScore + a.contextScore),
-  );
+  const sorted = scored.sort((a, b) => scoreTotal(b) - scoreTotal(a));
+  return pickIntelligently(sorted, input.limit ?? 12);
 };
 
 export async function getRankedMeals(input: MealEngineInput): Promise<MealMatch[]> {
@@ -329,8 +387,8 @@ export async function getRankedMeals(input: MealEngineInput): Promise<MealMatch[
       ),
     );
 
-    return scoreMeals(created, input).slice(0, input.limit ?? 5);
+    return scoreMeals(created, input).slice(0, input.limit ?? 12);
   }
 
-  return scoreMeals(hardFiltered, input).slice(0, input.limit ?? 5);
+  return scoreMeals(hardFiltered, input).slice(0, input.limit ?? 12);
 }

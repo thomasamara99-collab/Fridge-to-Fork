@@ -83,10 +83,14 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   let filters = parseFilters(searchParams.get("filters"));
   const hungerLevel = Number(searchParams.get("hunger") ?? "3");
-  const limit = Number(searchParams.get("limit") ?? "5");
+  const limit = Number(searchParams.get("limit") ?? "12");
+  const excludedMealIds = (searchParams.get("excludeMealIds") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
 
   await ensureBaseMeals(prisma);
-  await ensureThemealDbMeals(prisma, { minimumCount: 24, batchSize: 8 });
+  await ensureThemealDbMeals(prisma, { minimumCount: 36, batchSize: 10 });
 
   const [profile, fridgeItems, meals] = await Promise.all([
     prisma.profile.findUnique({ where: { userId: session.user.id } }),
@@ -167,6 +171,7 @@ export async function GET(request: Request) {
       swipedAt: swipe.swipedAt,
     })),
     todaysCategoryCount,
+    excludedMealIds,
     limit,
   });
 
@@ -184,6 +189,7 @@ export async function GET(request: Request) {
         swipedAt: swipe.swipedAt,
       })),
       todaysCategoryCount,
+      excludedMealIds,
       limit,
     });
   }

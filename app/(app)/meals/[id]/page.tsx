@@ -2,7 +2,6 @@ import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 
 import TagChip from "../../../../components/ui/TagChip";
-import AdminPhotoUploader from "../../../../components/meal/AdminPhotoUploader";
 import { auth } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
 import type { IngredientEntry } from "../../../../types";
@@ -34,14 +33,6 @@ export default async function MealDetailPage({
   if (!meal) {
     notFound();
   }
-
-  const tags = (() => {
-    try {
-      return JSON.parse(meal.tags) as string[];
-    } catch {
-      return [];
-    }
-  })();
 
   const ingredients = (() => {
     try {
@@ -145,8 +136,6 @@ export default async function MealDetailPage({
         </section>
       ) : null}
 
-      <AdminPhotoUploader mealId={meal.id} />
-
       <section className="rounded-card border border-border bg-surface p-4">
         <p className="text-sm font-medium text-text-primary">Macros</p>
         <div className="mt-3 grid grid-cols-2 gap-3 text-sm text-text-secondary">
@@ -192,17 +181,6 @@ export default async function MealDetailPage({
           </div>
         </div>
       </section>
-
-      {tags.length ? (
-        <section className="rounded-card border border-border bg-surface p-4">
-          <p className="text-sm font-medium text-text-primary">Tags</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <TagChip key={tag} label={tag} />
-            ))}
-          </div>
-        </section>
-      ) : null}
 
       <section className="rounded-card border border-border bg-surface p-4">
         <p className="text-sm font-medium text-text-primary">Ingredients</p>

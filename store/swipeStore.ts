@@ -37,7 +37,12 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
   filters: defaultFilters,
   hungerLevel: 3,
   setDeck: (deck) => set({ deck }),
-  appendDeck: (deck) => set({ deck: [...get().deck, ...deck] }),
+  appendDeck: (incoming) =>
+    set((state) => {
+      const existingIds = new Set(state.deck.map((meal) => meal.id));
+      const uniqueIncoming = incoming.filter((meal) => !existingIds.has(meal.id));
+      return { deck: [...state.deck, ...uniqueIncoming] };
+    }),
   shiftDeck: () => {
     const [first, ...rest] = get().deck;
     set({ deck: rest });
