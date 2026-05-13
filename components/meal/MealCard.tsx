@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 
+import TagChip from "../ui/TagChip";
 import type { MealFeedItem } from "../../types";
 
 const themeColors: Record<string, string> = {
@@ -15,6 +16,7 @@ const themeColors: Record<string, string> = {
 
 export default function MealCard({ meal }: { meal: MealFeedItem }) {
   const totalMinutes = meal.prepMinutes + meal.cookMinutes;
+  const tags = meal.computedTags.length ? meal.computedTags : meal.tags;
   const [imageFailed, setImageFailed] = useState(false);
 
   return (
@@ -58,6 +60,16 @@ export default function MealCard({ meal }: { meal: MealFeedItem }) {
           <p className="mt-1 truncate text-[13px] text-text-secondary">
             {meal.description}
           </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {tags.slice(0, 4).map((tag) => (
+            <TagChip
+              key={tag}
+              label={tag}
+              tone={tag.includes("fridge") ? "green" : "default"}
+            />
+          ))}
         </div>
 
         <div className="h-px w-full bg-border" />

@@ -16,10 +16,11 @@ export function useSwipeDeck() {
     setHungerLevel,
     toggleFilter,
   } = useSwipeStore();
+
   const mealFeed = useMealFeed({
     filters,
     hungerLevel,
-    limit: 12,
+    limit: 5,
     includeHungerInKey: false,
   });
 

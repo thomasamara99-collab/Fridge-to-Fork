@@ -24,8 +24,6 @@ export default function SwipePage() {
     appendDeck,
     shiftDeck,
     isLoading,
-    error,
-    refetch,
   } = useSwipeDeck();
   const { data: profile } = useProfile();
   const { data: log } = useTodayLog();
@@ -34,7 +32,6 @@ export default function SwipePage() {
     null,
   );
   const [isPrefetching, setIsPrefetching] = useState(false);
-  const [isCooking, setIsCooking] = useState(false);
 
   const dateLabel = useMemo(
     () =>
@@ -64,63 +61,24 @@ export default function SwipePage() {
     shiftDeck();
 
     const swipeBody = JSON.stringify({ mealId: meal.id, direction });
-    const swipeResponse = await fetch("/api/meals/swipe", {
+    const swipeRequest = fetch("/api/meals/swipe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: swipeBody,
     });
 
-    if (direction === "right" && !swipeResponse.ok) {
-      await fetch("/api/meals/saved", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mealId: meal.id }),
-      });
-    }
-
+    await swipeRequest;
     queryClient.invalidateQueries({ queryKey: ["saved-meals"] });
 
     const remainingCount = Math.max(deck.length - 1, 0);
     if (remainingCount <= 2 && !isPrefetching) {
       setIsPrefetching(true);
       try {
-        const excludedIds = Array.from(new Set(deck.map((item) => item.id)));
-        const more = await fetchMealFeed(filters, hungerLevel, 12, excludedIds);
+        const more = await fetchMealFeed(filters, hungerLevel, 5);
         appendDeck(more);
       } finally {
         setIsPrefetching(false);
       }
-    }
-  };
-
-  const cookCurrentMeal = async () => {
-    if (!frontMeal || isCooking) return;
-
-    setIsCooking(true);
-    try {
-      const response = await fetch("/api/meals/log", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mealId: frontMeal.id }),
-      });
-
-      if (response.ok) {
-        await fetch("/api/meals/swipe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            mealId: frontMeal.id,
-            direction: "cooked",
-            save: false,
-          }),
-        });
-        queryClient.invalidateQueries({ queryKey: ["log", "today"] });
-        queryClient.invalidateQueries({ queryKey: ["saved-meals"] });
-        queryClient.invalidateQueries({ queryKey: ["meal-feed"] });
-        shiftDeck();
-      }
-    } finally {
-      setIsCooking(false);
     }
   };
 
@@ -223,19 +181,6 @@ export default function SwipePage() {
           <div className="flex h-[520px] items-center justify-center rounded-card border border-dashed border-border bg-surface-2 text-sm text-text-tertiary">
             Loading meals...
           </div>
-        ) : error ? (
-          <div className="flex h-[520px] flex-col items-center justify-center gap-3 rounded-card border border-dashed border-border bg-surface-2 px-6 text-center text-sm text-text-tertiary">
-            <p>We couldn&apos;t load meals right now.</p>
-            <button
-              type="button"
-              onClick={() => {
-                void refetch();
-              }}
-              className="rounded-md border border-border bg-surface px-4 py-2 text-xs text-text-primary"
-            >
-              Retry
-            </button>
-          </div>
         ) : (
           <SwipeDeck
             meals={deck}
@@ -271,15 +216,6 @@ export default function SwipePage() {
           disabled={!deck.length}
         >
           Save
-        </button>
-        <button
-          className="rounded-full border border-green bg-green-light px-4 py-3 text-xs font-semibold text-green-text disabled:opacity-60"
-          onClick={() => {
-            void cookCurrentMeal();
-          }}
-          disabled={!frontMeal || isCooking}
-        >
-          {isCooking ? "Cooking..." : "Cook"}
         </button>
       </section>
     </main>

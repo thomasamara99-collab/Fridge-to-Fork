@@ -7,8 +7,7 @@ import { prisma } from "../../../../lib/prisma";
 
 const swipeSchema = z.object({
   mealId: z.string(),
-  direction: z.enum(["left", "right", "cooked"]),
-  save: z.boolean().optional(),
+  direction: z.enum(["left", "right"]),
 });
 
 export async function POST(request: Request) {
@@ -34,7 +33,7 @@ export async function POST(request: Request) {
     }),
   ];
 
-  if (parsed.data.direction === "right" && parsed.data.save !== false) {
+  if (parsed.data.direction === "right") {
     operations.push(
       prisma.savedMeal.upsert({
         where: {

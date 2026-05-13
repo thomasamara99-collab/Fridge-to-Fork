@@ -27,12 +27,6 @@ export default function MealDetailActions({ mealId, mealName }: MealDetailAction
         return;
       }
 
-      await fetch("/api/meals/swipe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mealId, direction: "cooked", save: false }),
-      });
-
       router.push("/log");
       router.refresh();
     } finally {
