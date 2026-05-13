@@ -110,7 +110,7 @@ export default function SwipePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             mealId: frontMeal.id,
-            direction: "right",
+            direction: "cooked",
             save: false,
           }),
         });

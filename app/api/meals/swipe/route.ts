@@ -7,7 +7,7 @@ import { prisma } from "../../../../lib/prisma";
 
 const swipeSchema = z.object({
   mealId: z.string(),
-  direction: z.enum(["left", "right"]),
+  direction: z.enum(["left", "right", "cooked"]),
   save: z.boolean().optional(),
 });
 

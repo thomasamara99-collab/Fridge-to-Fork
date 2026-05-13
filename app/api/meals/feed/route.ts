@@ -205,7 +205,7 @@ export async function GET(request: Request) {
     hungerLevel,
     swipes: swipes.map((swipe) => ({
       mealId: swipe.mealId,
-      direction: swipe.direction as "left" | "right",
+      direction: swipe.direction as "left" | "right" | "cooked",
       swipedAt: swipe.swipedAt,
     })),
     todaysCategoryCount,
@@ -223,13 +223,42 @@ export async function GET(request: Request) {
       hungerLevel,
       swipes: swipes.map((swipe) => ({
         mealId: swipe.mealId,
-        direction: swipe.direction as "left" | "right",
+        direction: swipe.direction as "left" | "right" | "cooked",
         swipedAt: swipe.swipedAt,
       })),
       todaysCategoryCount,
       excludedMealIds,
       limit,
     });
+  }
+
+  if (ranked.length < Math.min(limit, 6)) {
+    const supplemental = await getRankedMeals({
+      meals,
+      profile,
+      fridgeItems,
+      todayLog,
+      filters: {
+        ...filters,
+        noConstraints: true,
+        fridgeOnly: false,
+      },
+      hungerLevel,
+      swipes: [],
+      todaysCategoryCount: {},
+      excludedMealIds: [
+        ...excludedMealIds,
+        ...ranked.map((meal) => meal.id),
+      ],
+      limit: limit - ranked.length,
+    });
+
+    const existingIds = new Set(ranked.map((meal) => meal.id));
+    for (const meal of supplemental) {
+      if (!existingIds.has(meal.id)) {
+        ranked.push(meal);
+      }
+    }
   }
 
   const payload = ranked.map((meal) => ({

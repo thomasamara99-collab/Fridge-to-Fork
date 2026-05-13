@@ -44,12 +44,14 @@ const isTrainingDay = (trainingDays: number[]) => {
 const wasRecentlySwiped = (swipes: SwipeRecord[], mealId: string) => {
   const now = Date.now();
   const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+  const sixHoursMs = 6 * 60 * 60 * 1000;
   const oneDayMs = 24 * 60 * 60 * 1000;
 
   return swipes.some((swipe) => {
     if (swipe.mealId !== mealId) return false;
     const elapsed = now - swipe.swipedAt.getTime();
-    if (swipe.direction === "right") return elapsed < sevenDaysMs;
+    if (swipe.direction === "cooked") return elapsed < sevenDaysMs;
+    if (swipe.direction === "right") return elapsed < sixHoursMs;
     if (swipe.direction === "left") return elapsed < oneDayMs;
     return false;
   });

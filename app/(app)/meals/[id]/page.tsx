@@ -2,6 +2,7 @@ import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 
 import TagChip from "../../../../components/ui/TagChip";
+import MealDetailActions from "../../../../components/meal/MealDetailActions";
 import { auth } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
 import type { IngredientEntry } from "../../../../types";
@@ -83,6 +84,8 @@ export default async function MealDetailPage({
         <h1 className="font-display text-3xl text-text-primary">{meal.name}</h1>
         <p className="text-sm text-text-secondary">{meal.description}</p>
       </header>
+
+      <MealDetailActions mealId={meal.id} mealName={meal.name} />
 
       <section className="overflow-hidden rounded-card border border-border bg-surface shadow-[0_2px_12px_rgba(0,0,0,0.06),_0_0_0_0.5px_rgba(0,0,0,0.04)]">
         {meal.photoPath ? (
@@ -244,6 +247,8 @@ export default async function MealDetailPage({
           )}
         </ol>
       </section>
+
+      <MealDetailActions mealId={meal.id} mealName={meal.name} />
     </main>
   );
 }
