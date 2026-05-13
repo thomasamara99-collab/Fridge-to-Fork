@@ -94,11 +94,47 @@ export async function GET(request: Request) {
     () => undefined,
   );
 
-  const [profile, fridgeItems, meals] = await Promise.all([
+  const [profile, fridgeItems, mealsRaw] = await Promise.all([
     prisma.profile.findUnique({ where: { userId: session.user.id } }),
     prisma.fridgeItem.findMany({ where: { userId: session.user.id } }),
-    prisma.meal.findMany(),
+    prisma.meal.findMany({
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        emoji: true,
+        photoPath: true,
+        category: true,
+        colorTheme: true,
+        calories: true,
+        protein: true,
+        carbs: true,
+        fat: true,
+        fibre: true,
+        prepMinutes: true,
+        cookMinutes: true,
+        difficulty: true,
+        tags: true,
+        ingredients: true,
+        steps: true,
+        isVegetarian: true,
+        isVegan: true,
+        isGlutenFree: true,
+        isDairyFree: true,
+        isHalal: true,
+        isKosher: true,
+        isNutFree: true,
+      },
+    }),
   ]);
+
+  const meals = mealsRaw.map((meal) => ({
+    ...meal,
+    photoPaths: meal.photoPath ? JSON.stringify([meal.photoPath]) : "[]",
+    satiating: 3,
+    tools: "[]",
+    allergens: "[]",
+  }));
 
   if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });

@@ -24,6 +24,8 @@ export default function SwipePage() {
     appendDeck,
     shiftDeck,
     isLoading,
+    error,
+    refetch,
   } = useSwipeDeck();
   const { data: profile } = useProfile();
   const { data: log } = useTodayLog();
@@ -220,6 +222,19 @@ export default function SwipePage() {
         {isLoading ? (
           <div className="flex h-[520px] items-center justify-center rounded-card border border-dashed border-border bg-surface-2 text-sm text-text-tertiary">
             Loading meals...
+          </div>
+        ) : error ? (
+          <div className="flex h-[520px] flex-col items-center justify-center gap-3 rounded-card border border-dashed border-border bg-surface-2 px-6 text-center text-sm text-text-tertiary">
+            <p>We couldn&apos;t load meals right now.</p>
+            <button
+              type="button"
+              onClick={() => {
+                void refetch();
+              }}
+              className="rounded-md border border-border bg-surface px-4 py-2 text-xs text-text-primary"
+            >
+              Retry
+            </button>
           </div>
         ) : (
           <SwipeDeck
