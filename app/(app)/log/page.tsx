@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { Html5Qrcode } from "html5-qrcode";
 
 import MacroRing from "../../../components/ui/MacroRing";
 import ProgressBar from "../../../components/ui/ProgressBar";
@@ -10,18 +11,6 @@ import { useTodayLog } from "../../../hooks/useTodayLog";
 import { useProfile } from "../../../hooks/useProfile";
 import { useSavedMeals } from "../../../hooks/useSavedMeals";
 import type { LoggedMeal, TodayLog } from "../../../types";
-
-type BarcodeDetectorConstructor = new (options?: {
-  formats?: string[];
-}) => {
-  detect: (image: ImageBitmapSource) => Promise<Array<{ rawValue: string }>>;
-};
-
-declare global {
-  interface Window {
-    BarcodeDetector?: BarcodeDetectorConstructor;
-  }
-}
 
 const getRemainingMessage = (remaining: number) => {
   const hour = new Date().getHours();
@@ -54,9 +43,8 @@ export default function LogPage() {
     "idle" | "starting" | "scanning" | "found" | "error"
   >("idle");
   const [scannerError, setScannerError] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const scanningRef = useRef(false);
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const scannerIdRef = useRef("reader");
   const [quickError, setQuickError] = useState<string | null>(null);
   const [quickSubmitting, setQuickSubmitting] = useState(false);
 
@@ -213,87 +201,68 @@ export default function LogPage() {
     }
   };
 
-  const stopScanner = () => {
-    scanningRef.current = false;
+  const stopScanner = async () => {
+    if (html5QrCodeRef.current) {
+      try {
+        await html5QrCodeRef.current.stop();
+        html5QrCodeRef.current.clear();
+      } catch (error) {
+        console.error("Error stopping scanner:", error);
+      }
+      html5QrCodeRef.current = null;
+    }
     setScannerStatus("idle");
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
   };
 
   const startScanner = async () => {
     setScannerError(null);
 
-    const Detector = window.BarcodeDetector;
-    if (!Detector) {
-      setScannerStatus("error");
-      setScannerError(
-        "Barcode scanning is not supported on this device. Use manual entry instead.",
-      );
-      return;
-    }
-
     if (scannerStatus === "starting" || scannerStatus === "scanning") return;
 
     setScannerStatus("starting");
+    
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: false,
-      });
+      const html5QrCode = new Html5Qrcode(scannerIdRef.current);
+      html5QrCodeRef.current = html5QrCode;
 
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-
-      const detector = new Detector({
-        formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"],
-      });
-
-      scanningRef.current = true;
-      setScannerStatus("scanning");
-
-      const scanLoop = async () => {
-        if (!scanningRef.current || !videoRef.current) return;
-        try {
-          const results = await detector.detect(videoRef.current);
-          if (results.length && results[0]?.rawValue) {
-            const value = results[0].rawValue;
-            setScannerStatus("found");
-            setScannerOpen(false);
-            stopScanner();
-            await lookupBarcode(value);
-            return;
-          }
-        } catch {
-          setScannerStatus("error");
-          setScannerError("Scanning failed. Try manual entry.");
-          stopScanner();
-          return;
-        }
-        requestAnimationFrame(scanLoop);
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0,
       };
 
-      requestAnimationFrame(scanLoop);
-    } catch {
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => {
+          setScannerStatus("found");
+          setScannerOpen(false);
+          void stopScanner();
+          void lookupBarcode(decodedText);
+        },
+        (errorMessage) => {
+          // Ignore scanning errors during normal operation
+          console.debug("Scanning error:", errorMessage);
+        }
+      );
+
+      setScannerStatus("scanning");
+    } catch (error) {
+      console.error("Error starting scanner:", error);
       setScannerStatus("error");
       setScannerError("Camera access failed. Check permissions.");
-      stopScanner();
+      void stopScanner();
     }
   };
 
   useEffect(() => {
     if (!scannerOpen) {
-      stopScanner();
+      void stopScanner();
     }
 
-    return () => stopScanner();
+    return () => {
+      void stopScanner();
+    };
   }, [scannerOpen]);
 
   const deleteMeal = async (meal: LoggedMeal) => {
@@ -413,12 +382,7 @@ export default function LogPage() {
             </button>
             {scannerOpen ? (
               <div className="overflow-hidden rounded-md border border-border bg-black">
-                <video
-                  ref={videoRef}
-                  className="h-48 w-full object-cover"
-                  muted
-                  playsInline
-                />
+                <div id={scannerIdRef.current} className="h-48 w-full" />
               </div>
             ) : null}
             {scannerError ? (
