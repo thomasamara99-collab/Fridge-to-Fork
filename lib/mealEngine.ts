@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "./prisma";
 import { ingredientInFridge } from "./ingredients";
 import { generateFallbackMeals } from "./claude";
+import { ensureThemealDbMeals } from "./themealdb";
 import type {
   ActiveFilters,
   DailyLogRecord,
@@ -298,6 +299,29 @@ export async function getRankedMeals(input: MealEngineInput): Promise<MealMatch[
   }
 
   if (hardFiltered.length < 2) {
+    // First, try to get more TheMealDB meals
+    await ensureThemealDbMeals(prisma, { minimumCount: 48, batchSize: 12 });
+    
+    // Reload meals from database to include newly synced TheMealDB meals
+    const allMeals = await prisma.meal.findMany();
+    
+    // Retry with relaxed filters
+    const relaxedFilters = { ...input.filters, noConstraints: true, fridgeOnly: false };
+    const relaxedFiltered: MealRecord[] = [];
+    
+    for (const meal of allMeals) {
+      const hard = passesHardFilters(meal, input.profile, relaxedFilters);
+      if (hard.ok) {
+        relaxedFiltered.push(meal);
+      }
+    }
+    
+    // If we have enough meals with relaxed filters, use those
+    if (relaxedFiltered.length >= 2) {
+      return scoreMeals(relaxedFiltered, { ...input, filters: relaxedFilters }).slice(0, input.limit ?? 5);
+    }
+    
+    // If still not enough meals, fall back to Claude-generated meals
     const remainingCalories =
       input.profile.targetCalories - input.todayLog.calories;
     const remainingProtein =
