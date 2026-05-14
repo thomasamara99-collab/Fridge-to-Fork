@@ -47,6 +47,7 @@ export default function LogPage() {
   const scannerIdRef = useRef("reader");
   const [quickError, setQuickError] = useState<string | null>(null);
   const [quickSubmitting, setQuickSubmitting] = useState(false);
+  const [showPermissionRequest, setShowPermissionRequest] = useState(false);
 
   const targets = profile ?? {
     targetCalories: 0,
@@ -214,11 +215,59 @@ export default function LogPage() {
     setScannerStatus("idle");
   };
 
+  const checkCameraPermission = async (): Promise<boolean> => {
+    try {
+      // Check if permission has been permanently denied
+      const permissionState = await navigator.permissions.query({ name: 'camera' as PermissionName });
+      if (permissionState.state === 'denied') {
+        return false;
+      }
+
+      // Check localStorage for remembered preference
+      const rememberedPermission = localStorage.getItem('cameraPermission');
+      if (rememberedPermission === 'denied') {
+        return false;
+      }
+
+      return true;
+    } catch {
+      // If permissions API is not supported, assume we can try
+      console.debug("Permissions API not supported, will try to access camera");
+      return true;
+    }
+  };
+
+  const requestCameraPermission = async (): Promise<boolean> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      // Stop the stream immediately after getting permission
+      stream.getTracks().forEach(track => track.stop());
+
+      // Remember that permission was granted
+      localStorage.setItem('cameraPermission', 'granted');
+      return true;
+    } catch (error) {
+      console.error("Camera permission denied:", error);
+      localStorage.setItem('cameraPermission', 'denied');
+      return false;
+    }
+  };
+
   const startScanner = async () => {
     setScannerError(null);
 
     if (scannerStatus === "starting" || scannerStatus === "scanning") return;
 
+    // Check if we need to ask for permission
+    const hasPermission = await checkCameraPermission();
+    const rememberedPermission = localStorage.getItem('cameraPermission');
+    
+    if (!hasPermission || rememberedPermission === null) {
+      // Show permission request dialog if not previously decided
+      setShowPermissionRequest(true);
+      return;
+    }
+    
     setScannerStatus("starting");
     
     try {
@@ -253,6 +302,23 @@ export default function LogPage() {
       setScannerError("Camera access failed. Check permissions.");
       void stopScanner();
     }
+  };
+
+  const handlePermissionGranted = async () => {
+    setShowPermissionRequest(false);
+    const granted = await requestCameraPermission();
+    if (granted) {
+      setScannerStatus("starting");
+      void startScanner();
+    } else {
+      setScannerError("Camera permission denied. You can enable it in browser settings.");
+    }
+  };
+
+  const handlePermissionDenied = () => {
+    localStorage.setItem('cameraPermission', 'denied');
+    setShowPermissionRequest(false);
+    setScannerError("Camera permission denied. You can enable it in browser settings.");
   };
 
   useEffect(() => {
@@ -570,6 +636,35 @@ export default function LogPage() {
       <section className="rounded-card border border-border bg-surface-2 p-4 text-sm text-text-secondary">
         {remainingMessage}
       </section>
+
+      {showPermissionRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-lg bg-surface p-6 shadow-lg">
+            <h3 className="mb-2 text-lg font-medium text-text-primary">
+              Camera Permission Required
+            </h3>
+            <p className="mb-6 text-sm text-text-secondary">
+              To scan barcodes, we need access to your camera. This permission will be remembered for future use.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handlePermissionDenied}
+                className="flex-1 rounded-md border border-border px-4 py-2 text-sm text-text-secondary hover:bg-surface-2"
+              >
+                Deny
+              </button>
+              <button
+                type="button"
+                onClick={handlePermissionGranted}
+                className="flex-1 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+              >
+                Allow
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
