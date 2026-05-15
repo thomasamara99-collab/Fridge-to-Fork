@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 import { useOnboardingStore } from "../../../store/onboardingStore";
@@ -31,11 +31,7 @@ export default function OnboardingCompletePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    saveProfile();
-  }, []);
-
-  const saveProfile = async () => {
+  const saveProfile = useCallback(async () => {
     if (
       !name ||
       age == null ||
@@ -96,7 +92,31 @@ export default function OnboardingCompletePage() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [
+    name,
+    age,
+    sex,
+    weightKg,
+    heightCm,
+    goal,
+    goalPreset,
+    targetCalories,
+    targetProtein,
+    targetCarbs,
+    targetFat,
+    calculatedTdee,
+    dietaryFilters,
+    dislikedIngredients,
+    cuisinePrefs,
+    cookingSkill,
+    budget,
+    reset,
+    router,
+  ]);
+
+  useEffect(() => {
+    saveProfile();
+  }, [saveProfile]);
 
   if (isSaving) {
     return (

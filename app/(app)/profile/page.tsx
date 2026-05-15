@@ -67,7 +67,7 @@ export default function ProfilePage() {
   const progressNarrative = useMemo(() => {
     if (!weeklyProgress || !stats) return null;
     
-    const { proteinGoalDays, totalDays, avgProtein } = weeklyProgress;
+    const { proteinGoalDays, totalDays } = weeklyProgress;
     const proteinRate = Math.round((proteinGoalDays / Math.max(totalDays, 1)) * 100);
     
     if (stats.streakDays >= 7) {

@@ -37,6 +37,7 @@ export default function SwipeDeck({
   const leftBadge = useTransform(x, [-140, -80], [1, 0]);
   const rightIconScale = useTransform(x, [80, 140], [0.8, 1.2]);
   const leftIconScale = useTransform(x, [-140, -80], [1.2, 0.8]);
+  const hintOpacity = useTransform(x, [-50, 0, 50], [0, 0.6, 0]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [flashRight, setFlashRight] = useState(false);
   const [flashLeft, setFlashLeft] = useState(false);
@@ -187,7 +188,7 @@ export default function SwipeDeck({
             {/* Large swipe hint overlay */}
             <motion.div
               className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-8"
-              style={{ opacity: useTransform(x, [-50, 0, 50], [0, 0.6, 0]) }}
+              style={{ opacity: hintOpacity }}
             >
               <p className="text-xs font-medium text-text-secondary">
                 Swipe to decide
