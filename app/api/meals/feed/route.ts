@@ -86,7 +86,7 @@ export async function GET(request: Request) {
   const limit = Number(searchParams.get("limit") ?? "5");
 
   await ensureBaseMeals(prisma);
-  await ensureThemealDbMeals(prisma, { minimumCount: 24, batchSize: 8 });
+  await ensureThemealDbMeals(prisma, { minimumCount: 150, batchSize: 20 });
 
   const [profile, fridgeItems, meals] = await Promise.all([
     prisma.profile.findUnique({ where: { userId: session.user.id } }),

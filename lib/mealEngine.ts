@@ -331,28 +331,50 @@ export async function getRankedMeals(input: MealEngineInput): Promise<MealMatch[
 
   if (hardFiltered.length < 2) {
     // First, try to get more TheMealDB meals
-    await ensureThemealDbMeals(prisma, { minimumCount: 48, batchSize: 12 });
+    await ensureThemealDbMeals(prisma, { minimumCount: 200, batchSize: 25 });
     
     // Reload meals from database to include newly synced TheMealDB meals
     const allMeals = await prisma.meal.findMany();
     
-    // Retry with relaxed filters
-    const relaxedFilters = { ...input.filters, noConstraints: true, fridgeOnly: false };
-    const relaxedFiltered: MealRecord[] = [];
+    // Retry with fully relaxed filters (no constraints at all)
+    const fullyRelaxedFilters = { 
+      noConstraints: true, 
+      fridgeOnly: false,
+      underTwentyMin: false,
+      underThirtyMin: false,
+      highProtein: false,
+      preWorkout: false,
+      budget: false,
+      underFiveHundredKcal: false,
+      vegetarianOnly: false,
+      veganOnly: false,
+      glutenFreeOnly: false,
+      dairyFreeOnly: false,
+      nutFreeOnly: false,
+      lowCarb: false,
+      highFiber: false,
+    };
+    const fullyRelaxedFiltered: MealRecord[] = [];
     
     for (const meal of allMeals) {
-      const hard = passesHardFilters(meal, input.profile, relaxedFilters);
+      const hard = passesHardFilters(meal, input.profile, fullyRelaxedFilters);
       if (hard.ok) {
-        relaxedFiltered.push(meal);
+        fullyRelaxedFiltered.push(meal);
       }
     }
     
-    // If we have enough meals with relaxed filters, use those
-    if (relaxedFiltered.length >= 2) {
-      return scoreMeals(relaxedFiltered, { ...input, filters: relaxedFilters }).slice(0, input.limit ?? 5);
+    // If we have enough meals with fully relaxed filters, use those
+    if (fullyRelaxedFiltered.length >= 2) {
+      return scoreMeals(fullyRelaxedFiltered, { ...input, filters: fullyRelaxedFilters }).slice(0, input.limit ?? 5);
     }
     
-    // If still not enough meals, fall back to Claude-generated meals
+    // As a last resort, return any available meals even if they don't match preferences
+    // This is better than falling back to Claude generation
+    if (allMeals.length >= 2) {
+      return scoreMeals(allMeals.slice(0, 10), { ...input, filters: fullyRelaxedFilters }).slice(0, input.limit ?? 5);
+    }
+    
+    // Only if absolutely nothing is available, fall back to Claude-generated meals
     const remainingCalories =
       input.profile.targetCalories - input.todayLog.calories;
     const remainingProtein =

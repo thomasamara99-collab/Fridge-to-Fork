@@ -15,8 +15,8 @@ type SwipeState = {
 };
 
 const defaultFilters: ActiveFilters = {
-  noConstraints: false,
-  fridgeOnly: true,
+  noConstraints: true,
+  fridgeOnly: false,
   underTwentyMin: false,
   underThirtyMin: false,
   highProtein: false,
@@ -70,6 +70,7 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
             },
           };
         }
+        // When turning off noConstraints, keep current filter states
         return { filters: { ...state.filters, noConstraints: false } };
       }
 

@@ -19,8 +19,6 @@ export default function ProfilePage() {
   const [weightInput, setWeightInput] = useState("");
   const [updatingWeight, setUpdatingWeight] = useState(false);
   const [weightMessage, setWeightMessage] = useState<string | null>(null);
-  const [syncingMeals, setSyncingMeals] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   const dietaryFilters = useMemo(() => {
     if (!profile?.dietaryFilters) return [];
@@ -116,26 +114,6 @@ export default function ProfilePage() {
       setWeightMessage("Could not update weight right now.");
     } finally {
       setUpdatingWeight(false);
-    }
-  };
-
-  const syncMealDatabase = async () => {
-    setSyncingMeals(true);
-    setSyncMessage(null);
-    try {
-      const response = await fetch("/api/meals/sync", { method: "POST" });
-      if (!response.ok) {
-        throw new Error("Could not sync meals");
-      }
-      const payload = (await response.json()) as { totalThemealDbMeals?: number };
-      setSyncMessage(
-        `Meal database updated. ${payload.totalThemealDbMeals ?? 0} imported meals available.`,
-      );
-      queryClient.invalidateQueries({ queryKey: ["meal-feed"] });
-    } catch {
-      setSyncMessage("Meal sync failed. Please try again in a moment.");
-    } finally {
-      setSyncingMeals(false);
     }
   };
 
@@ -350,26 +328,6 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          {/* Recipe Database */}
-          <section className="rounded-card border border-border bg-surface p-5">
-            <p className="text-sm font-medium text-text-primary">Recipe database</p>
-            <p className="mt-2 text-sm text-text-secondary">
-              Meals are imported from TheMealDB so users do not need manual admin entry.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                void syncMealDatabase();
-              }}
-              disabled={syncingMeals}
-              className="mt-4 inline-flex items-center justify-center rounded-md border border-border bg-surface-2 px-4 py-2 text-xs text-text-primary disabled:opacity-60"
-            >
-              {syncingMeals ? "Syncing..." : "Sync meal database"}
-            </button>
-            {syncMessage ? (
-              <p className="mt-2 text-xs text-text-secondary">{syncMessage}</p>
-            ) : null}
-          </section>
         </div>
       </details>
 

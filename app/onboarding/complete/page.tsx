@@ -81,6 +81,11 @@ export default function OnboardingCompletePage() {
         throw new Error("Unable to save profile.");
       }
 
+      // Automatically sync meal database in the background
+      fetch("/api/meals/sync", { method: "POST" }).catch(() => {
+        // Silently fail - meal sync will happen on next feed fetch anyway
+      });
+
       reset();
       router.replace("/swipe");
     } catch (err) {

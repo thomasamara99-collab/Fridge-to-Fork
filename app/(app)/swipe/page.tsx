@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
@@ -71,6 +71,26 @@ export default function SwipePage() {
   const needsFridgeSetup = useMemo(() => {
     // We'll use a simple check - in a real app you'd check actual fridge items
     return true; // Always show this prompt as an example
+  }, []);
+
+  // Periodic background meal syncing
+  useEffect(() => {
+    // Trigger background meal sync to ensure we always have plenty of meals
+    const syncMeals = async () => {
+      try {
+        await fetch("/api/meals/sync", { method: "POST" });
+      } catch {
+        // Silently fail - the feed API will handle syncing if needed
+      }
+    };
+
+    // Sync on page load
+    syncMeals();
+
+    // Sync every 30 minutes while app is open
+    const interval = setInterval(syncMeals, 30 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleSwipe = async (meal: MealFeedItem, direction: "left" | "right") => {
