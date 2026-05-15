@@ -86,7 +86,10 @@ export async function GET(request: Request) {
   const limit = Number(searchParams.get("limit") ?? "5");
 
   await ensureBaseMeals(prisma);
-  await ensureThemealDbMeals(prisma, { minimumCount: 50, batchSize: 12 });
+  // Trigger background sync without blocking
+  ensureThemealDbMeals(prisma, { minimumCount: 30, batchSize: 10 }).catch(() => {
+    // Silent fail - sync will happen eventually
+  });
 
   const [profile, fridgeItems, meals] = await Promise.all([
     prisma.profile.findUnique({ where: { userId: session.user.id } }),

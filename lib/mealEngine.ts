@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "./prisma";
 import { ingredientInFridge } from "./ingredients";
 import { ensureThemealDbMeals } from "./themealdb";
+import { ensureBaseMeals } from "./baseMeals";
 import type {
   ActiveFilters,
   DailyLogRecord,
@@ -289,6 +290,9 @@ const scoreMeals = (
 };
 
 export async function getRankedMeals(input: MealEngineInput): Promise<MealMatch[]> {
+  // Ensure base meals exist
+  await ensureBaseMeals(prisma);
+  
   const hardFiltered: MealRecord[] = [];
 
   for (const meal of input.meals) {
@@ -298,69 +302,71 @@ export async function getRankedMeals(input: MealEngineInput): Promise<MealMatch[
     }
   }
 
-  if (hardFiltered.length < 2) {
-    // First, try to get more TheMealDB meals
-    await ensureThemealDbMeals(prisma, { minimumCount: 75, batchSize: 15 });
-    
-    // Reload meals from database to include newly synced TheMealDB meals
-    const allMeals = await prisma.meal.findMany();
-    
-    // Retry with fully relaxed filters (no constraints at all)
-    const fullyRelaxedFilters = { 
-      noConstraints: true, 
-      fridgeOnly: false,
-      underTwentyMin: false,
-      underThirtyMin: false,
-      highProtein: false,
-      preWorkout: false,
-      budget: false,
-      underFiveHundredKcal: false,
-      vegetarianOnly: false,
-      veganOnly: false,
-      glutenFreeOnly: false,
-      dairyFreeOnly: false,
-      nutFreeOnly: false,
-      lowCarb: false,
-      highFiber: false,
-    };
-    const fullyRelaxedFiltered: MealRecord[] = [];
-    
-    for (const meal of allMeals) {
-      const hard = passesHardFilters(meal, input.profile, fullyRelaxedFilters);
-      if (hard.ok) {
-        fullyRelaxedFiltered.push(meal);
-      }
-    }
-    
-    // If we have enough meals with fully relaxed filters, use those
-    if (fullyRelaxedFiltered.length >= 2) {
-      return scoreMeals(fullyRelaxedFiltered, { ...input, filters: fullyRelaxedFilters }).slice(0, input.limit ?? 5);
-    }
-    
-    // As a last resort, return any available meals even if they don't match preferences
-    // This is better than falling back to Claude generation
-    if (allMeals.length >= 2) {
-      return scoreMeals(allMeals.slice(0, 10), { ...input, filters: fullyRelaxedFilters }).slice(0, input.limit ?? 5);
-    }
-    
-    // If we have at least 1 meal, return it rather than falling back to Claude
-    if (allMeals.length >= 1) {
-      return scoreMeals(allMeals.slice(0, 5), { ...input, filters: fullyRelaxedFilters }).slice(0, input.limit ?? 5);
-    }
-    
-    // As absolute last resort, use base meals instead of Claude generation
-    const baseMeals = await prisma.meal.findMany({
-      where: { isSeeded: true },
-      take: 5,
-    });
-    
-    if (baseMeals.length > 0) {
-      return scoreMeals(baseMeals, { ...input, filters: fullyRelaxedFilters }).slice(0, input.limit ?? 5);
-    }
-    
-    // If absolutely nothing, return empty array
-    return [];
+  // If we have enough meals, return them
+  if (hardFiltered.length >= 2) {
+    return scoreMeals(hardFiltered, input).slice(0, input.limit ?? 5);
   }
 
-  return scoreMeals(hardFiltered, input).slice(0, input.limit ?? 5);
+  // If we have 1 meal, still return it (better than nothing)
+  if (hardFiltered.length === 1) {
+    return scoreMeals(hardFiltered, input).slice(0, input.limit ?? 5);
+  }
+
+  // Try to get more meals with relaxed filters
+  const fullyRelaxedFilters = { 
+    noConstraints: true, 
+    fridgeOnly: false,
+    underTwentyMin: false,
+    underThirtyMin: false,
+    highProtein: false,
+    preWorkout: false,
+    budget: false,
+    underFiveHundredKcal: false,
+    vegetarianOnly: false,
+    veganOnly: false,
+    glutenFreeOnly: false,
+    dairyFreeOnly: false,
+    nutFreeOnly: false,
+    lowCarb: false,
+    highFiber: false,
+  };
+  
+  const relaxedFiltered: MealRecord[] = [];
+  for (const meal of input.meals) {
+    const hard = passesHardFilters(meal, input.profile, fullyRelaxedFilters);
+    if (hard.ok) {
+      relaxedFiltered.push(meal);
+    }
+  }
+  
+  if (relaxedFiltered.length >= 2) {
+    return scoreMeals(relaxedFiltered, { ...input, filters: fullyRelaxedFilters }).slice(0, input.limit ?? 5);
+  }
+  
+  if (relaxedFiltered.length === 1) {
+    return scoreMeals(relaxedFiltered, { ...input, filters: fullyRelaxedFilters }).slice(0, input.limit ?? 5);
+  }
+
+  // Try to sync more meals as background task (non-blocking)
+  ensureThemealDbMeals(prisma, { minimumCount: 30, batchSize: 10 }).catch(() => {
+    // Silent fail - sync will happen eventually
+  });
+  
+  // Use base meals as fallback
+  const baseMeals = await prisma.meal.findMany({
+    where: { isSeeded: true },
+    take: 5,
+  });
+  
+  if (baseMeals.length > 0) {
+    return scoreMeals(baseMeals, { ...input, filters: fullyRelaxedFilters }).slice(0, input.limit ?? 5);
+  }
+  
+  // Last resort - return any meals from database
+  const allMeals = await prisma.meal.findMany({ take: 10 });
+  if (allMeals.length > 0) {
+    return scoreMeals(allMeals, { ...input, filters: fullyRelaxedFilters }).slice(0, input.limit ?? 5);
+  }
+  
+  return [];
 }
