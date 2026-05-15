@@ -2,12 +2,10 @@ import "server-only";
 
 import { prisma } from "./prisma";
 import { ingredientInFridge } from "./ingredients";
-import { generateFallbackMeals } from "./claude";
 import { ensureThemealDbMeals } from "./themealdb";
 import type {
   ActiveFilters,
   DailyLogRecord,
-  MealData,
   MealMatch,
   MealRecord,
   ProfileRecord,
@@ -84,35 +82,6 @@ const getCategoryDislikeScore = (
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
-
-const buildMealRecordFromGenerated = (meal: MealData) => ({
-  name: meal.name,
-  description: meal.description,
-  emoji: meal.emoji,
-  photoPath: meal.photoPath ?? null,
-  category: meal.category,
-  colorTheme: meal.colorTheme,
-  calories: meal.calories,
-  protein: meal.protein,
-  carbs: meal.carbs,
-  fat: meal.fat,
-  fibre: meal.fibre,
-  prepMinutes: meal.prepMinutes,
-  cookMinutes: meal.cookMinutes,
-  difficulty: meal.difficulty,
-  tags: JSON.stringify(meal.tags),
-  ingredients: JSON.stringify(meal.ingredients),
-  steps: JSON.stringify(meal.steps),
-  isVegetarian: meal.isVegetarian,
-  isVegan: meal.isVegan,
-  isGlutenFree: meal.isGlutenFree,
-  isDairyFree: meal.isDairyFree,
-  isHalal: meal.isHalal,
-  isKosher: meal.isKosher,
-  isNutFree: meal.isNutFree,
-  isSeeded: false,
-  createdBy: null,
-});
 
 const passesHardFilters = (
   meal: MealRecord,
@@ -331,7 +300,7 @@ export async function getRankedMeals(input: MealEngineInput): Promise<MealMatch[
 
   if (hardFiltered.length < 2) {
     // First, try to get more TheMealDB meals
-    await ensureThemealDbMeals(prisma, { minimumCount: 200, batchSize: 25 });
+    await ensureThemealDbMeals(prisma, { minimumCount: 75, batchSize: 15 });
     
     // Reload meals from database to include newly synced TheMealDB meals
     const allMeals = await prisma.meal.findMany();
@@ -374,39 +343,23 @@ export async function getRankedMeals(input: MealEngineInput): Promise<MealMatch[
       return scoreMeals(allMeals.slice(0, 10), { ...input, filters: fullyRelaxedFilters }).slice(0, input.limit ?? 5);
     }
     
-    // Only if absolutely nothing is available, fall back to Claude-generated meals
-    const remainingCalories =
-      input.profile.targetCalories - input.todayLog.calories;
-    const remainingProtein =
-      input.profile.targetProtein - input.todayLog.protein;
-    const remainingCarbs = input.profile.targetCarbs - input.todayLog.carbs;
-    const remainingFat = input.profile.targetFat - input.todayLog.fat;
-
-    const fallbackMeals = await generateFallbackMeals({
-      remainingCalories,
-      remainingProtein,
-      remainingCarbs,
-      remainingFat,
-      fridgeItems: input.fridgeItems.map((item) => item.name),
-      dietaryFilters: jsonArray<string[]>(input.profile.dietaryFilters, []),
-      dislikedIngredients: jsonArray<string[]>(
-        input.profile.dislikedIngredients,
-        [],
-      ),
-      filters: input.filters,
-      hungerLevel: input.hungerLevel,
-      count: 3,
+    // If we have at least 1 meal, return it rather than falling back to Claude
+    if (allMeals.length >= 1) {
+      return scoreMeals(allMeals.slice(0, 5), { ...input, filters: fullyRelaxedFilters }).slice(0, input.limit ?? 5);
+    }
+    
+    // As absolute last resort, use base meals instead of Claude generation
+    const baseMeals = await prisma.meal.findMany({
+      where: { isSeeded: true },
+      take: 5,
     });
-
-    const created = await Promise.all(
-      fallbackMeals.map((meal) =>
-        prisma.meal.create({
-          data: buildMealRecordFromGenerated(meal),
-        }),
-      ),
-    );
-
-    return scoreMeals(created, input).slice(0, input.limit ?? 5);
+    
+    if (baseMeals.length > 0) {
+      return scoreMeals(baseMeals, { ...input, filters: fullyRelaxedFilters }).slice(0, input.limit ?? 5);
+    }
+    
+    // If absolutely nothing, return empty array
+    return [];
   }
 
   return scoreMeals(hardFiltered, input).slice(0, input.limit ?? 5);

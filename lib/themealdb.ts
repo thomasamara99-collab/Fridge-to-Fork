@@ -444,8 +444,8 @@ export async function ensureThemealDbMeals(
   prisma: PrismaClient,
   options?: { minimumCount?: number; batchSize?: number; force?: boolean },
 ) {
-  const minimumCount = options?.minimumCount ?? 150;
-  const batchSize = options?.batchSize ?? 20;
+  const minimumCount = options?.minimumCount ?? 50;
+  const batchSize = options?.batchSize ?? 12;
   const force = options?.force ?? false;
 
   const now = Date.now();
