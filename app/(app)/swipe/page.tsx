@@ -57,6 +57,22 @@ export default function SwipePage() {
 
   const frontMeal = deck[0];
 
+  // Check if user needs to complete training schedule or fridge setup
+  const needsTrainingSetup = useMemo(() => {
+    if (!profile?.trainingDays) return true;
+    try {
+      const days = JSON.parse(profile.trainingDays) as number[];
+      return days.length === 0;
+    } catch {
+      return true;
+    }
+  }, [profile?.trainingDays]);
+
+  const needsFridgeSetup = useMemo(() => {
+    // We'll use a simple check - in a real app you'd check actual fridge items
+    return true; // Always show this prompt as an example
+  }, []);
+
   const handleSwipe = async (meal: MealFeedItem, direction: "left" | "right") => {
     shiftDeck();
 
@@ -118,6 +134,49 @@ export default function SwipePage() {
           </Link>
         </div>
       </header>
+
+      {/* Contextual prompts for setup completion */}
+      {needsTrainingSetup && (
+        <div className="rounded-card border border-accent/30 bg-accent-light p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-text-primary">
+                Set your training schedule
+              </p>
+              <p className="mt-1 text-xs text-text-secondary">
+                Tell us when you train to get better pre-workout meal suggestions.
+              </p>
+            </div>
+            <Link
+              href="/onboarding/step-5?setup=1"
+              className="rounded-md bg-accent px-3 py-2 text-xs font-medium text-white"
+            >
+              Set up
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {needsFridgeSetup && (
+        <div className="rounded-card border border-accent/30 bg-accent-light p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-text-primary">
+                Add your fridge items
+              </p>
+              <p className="mt-1 text-xs text-text-secondary">
+                Unlock better meal matches by adding what you have on hand.
+              </p>
+            </div>
+            <Link
+              href="/fridge"
+              className="rounded-md bg-accent px-3 py-2 text-xs font-medium text-white"
+            >
+              Add items
+            </Link>
+          </div>
+        </div>
+      )}
 
       <section className="flex justify-between rounded-card border border-border bg-surface px-4 py-4 shadow-[0_2px_12px_rgba(0,0,0,0.06),_0_0_0_0.5px_rgba(0,0,0,0.04)]">
         <MacroRing

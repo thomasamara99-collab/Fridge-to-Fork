@@ -6,6 +6,7 @@ import {
   useAnimation,
   useMotionValue,
   useTransform,
+  AnimatePresence,
 } from "framer-motion";
 
 import type { MealFeedItem } from "../../types";
@@ -30,12 +31,15 @@ export default function SwipeDeck({
   const controls = useAnimation();
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-300, 300], [-15, 15]);
-  const rightOverlay = useTransform(x, [60, 120], [0, 0.7]);
-  const leftOverlay = useTransform(x, [-120, -60], [0.7, 0]);
+  const rightOverlay = useTransform(x, [60, 120], [0, 0.8]);
+  const leftOverlay = useTransform(x, [-120, -60], [0.8, 0]);
   const rightBadge = useTransform(x, [80, 140], [0, 1]);
   const leftBadge = useTransform(x, [-140, -80], [1, 0]);
+  const rightIconScale = useTransform(x, [80, 140], [0.8, 1.2]);
+  const leftIconScale = useTransform(x, [-140, -80], [1.2, 0.8]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [flashRight, setFlashRight] = useState(false);
+  const [flashLeft, setFlashLeft] = useState(false);
 
   const frontId = front?.id;
 
@@ -46,14 +50,17 @@ export default function SwipeDeck({
 
       if (direction === "right") {
         setFlashRight(true);
-        window.setTimeout(() => setFlashRight(false), 200);
+        window.setTimeout(() => setFlashRight(false), 300);
+      } else {
+        setFlashLeft(true);
+        window.setTimeout(() => setFlashLeft(false), 300);
       }
 
       await controls.start({
         x: direction === "right" ? 600 : -600,
         rotate: direction === "right" ? 20 : -20,
         opacity: 0,
-        transition: { duration: 0.3 },
+        transition: { duration: 0.35, ease: "easeOut" },
       });
 
       onSwipe(front, direction);
@@ -79,7 +86,7 @@ export default function SwipeDeck({
 
   const overlayBadgeClass = useMemo(
     () =>
-      "absolute top-5 rounded-full border-2 px-4 py-2 font-display text-xl italic",
+      "absolute top-6 rounded-full border-2 px-6 py-3 font-display text-2xl italic font-bold shadow-lg",
     [],
   );
 
@@ -101,25 +108,29 @@ export default function SwipeDeck({
           className="absolute inset-0"
           drag={isAnimating ? false : "x"}
           dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.2}
+          dragElastic={0.15}
+          dragMomentum={false}
           onDragEnd={(_, info) => {
-            if (info.offset.x > 120) {
+            if (info.offset.x > 100) {
               triggerSwipe("right");
-            } else if (info.offset.x < -120) {
+            } else if (info.offset.x < -100) {
               triggerSwipe("left");
             } else {
               controls.start({
                 x: 0,
                 rotate: 0,
-                transition: { type: "spring", stiffness: 300, damping: 25 },
+                transition: { type: "spring", stiffness: 400, damping: 30 },
               });
             }
           }}
           style={{ x, rotate }}
           animate={controls}
+          whileTap={{ scale: 0.98 }}
         >
           <div className="relative h-full">
             <MealCard meal={front} />
+            
+            {/* Swipe overlays */}
             <motion.div
               className="pointer-events-none absolute inset-0 rounded-card"
               style={{ opacity: rightOverlay, backgroundColor: "#EAF5EE" }}
@@ -128,24 +139,60 @@ export default function SwipeDeck({
               className="pointer-events-none absolute inset-0 rounded-card"
               style={{ opacity: leftOverlay, backgroundColor: "#EDEAE4" }}
             />
+            
+            {/* Action badges */}
             <motion.div
-              className={`${overlayBadgeClass} left-5 -rotate-12 border-green text-green`}
-              style={{ opacity: rightBadge }}
+              className={`${overlayBadgeClass} left-6 -rotate-12 border-green bg-white/95 text-green shadow-xl`}
+              style={{ opacity: rightBadge, scale: rightIconScale }}
             >
-                            Save meal
+              <span className="flex items-center gap-2">
+                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                Save
+              </span>
             </motion.div>
             <motion.div
-              className={`${overlayBadgeClass} right-5 rotate-12 border-border-strong text-text-secondary`}
-              style={{ opacity: leftBadge }}
+              className={`${overlayBadgeClass} right-6 rotate-12 border-border-strong bg-white/95 text-text-secondary shadow-xl`}
+              style={{ opacity: leftBadge, scale: leftIconScale }}
             >
-              Skip
+              <span className="flex items-center gap-2">
+                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+                Skip
+              </span>
             </motion.div>
-            {flashRight ? (
-              <div
-                className="pointer-events-none absolute inset-0 rounded-card"
-                style={{ backgroundColor: "rgba(234, 245, 238, 0.7)" }}
-              />
-            ) : null}
+            
+            {/* Flash effects */}
+            <AnimatePresence>
+              {flashRight ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="pointer-events-none absolute inset-0 rounded-card bg-green/20"
+                />
+              ) : null}
+              {flashLeft ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="pointer-events-none absolute inset-0 rounded-card bg-red/10"
+                />
+              ) : null}
+            </AnimatePresence>
+
+            {/* Large swipe hint overlay */}
+            <motion.div
+              className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-8"
+              style={{ opacity: useTransform(x, [-50, 0, 50], [0, 0.6, 0]) }}
+            >
+              <p className="text-xs font-medium text-text-secondary">
+                Swipe to decide
+              </p>
+            </motion.div>
           </div>
         </motion.div>
       ) : (

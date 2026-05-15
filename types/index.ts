@@ -167,6 +167,7 @@ export type SwipeRecord = {
   mealId: string;
   direction: "left" | "right";
   swipedAt: Date;
+  category?: string;
 };
 
 export type LogHistoryDay = {

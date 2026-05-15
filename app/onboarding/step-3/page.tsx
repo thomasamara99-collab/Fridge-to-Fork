@@ -164,7 +164,7 @@ export default function Step3Page() {
   return (
     <StepLayout
       step={editMode ? 1 : 3}
-      total={editMode ? 1 : 6}
+      total={editMode ? 1 : 4}
       title={editMode ? "Update targets" : "Calorie targets"}
       subtitle={
         editMode

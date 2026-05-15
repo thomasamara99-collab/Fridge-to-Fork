@@ -49,7 +49,7 @@ export default function Step1Page() {
   return (
     <StepLayout
       step={1}
-      total={6}
+      total={4}
       title="Your basics"
       subtitle="Tell us a little about your body stats so we can set smart targets."
       ctaLabel="Continue"

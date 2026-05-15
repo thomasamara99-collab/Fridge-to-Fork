@@ -31,7 +31,7 @@ export default function Step2Page() {
   return (
     <StepLayout
       step={2}
-      total={6}
+      total={4}
       title="Your goal"
       subtitle="Pick the direction that matches what you want right now."
       ctaLabel="Continue"

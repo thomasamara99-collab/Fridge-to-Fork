@@ -55,6 +55,33 @@ const wasRecentlySwiped = (swipes: SwipeRecord[], mealId: string) => {
   });
 };
 
+// Track category dislikes based on left swipes
+const getCategoryDislikeScore = (
+  swipes: SwipeRecord[],
+  mealCategory: string,
+  mealId: string,
+): number => {
+  const now = Date.now();
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+  
+  // Count left swipes for this category in the past 7 days (excluding current meal)
+  const categoryLeftSwipes = swipes.filter((swipe) => {
+    if (swipe.mealId === mealId) return false; // Exclude current meal
+    if (swipe.direction !== "left") return false;
+    if (swipe.category !== mealCategory) return false; // Only count same category
+    const elapsed = now - swipe.swipedAt.getTime();
+    return elapsed < sevenDaysMs;
+  });
+
+  // If user has swiped left on this category 3+ times, heavily penalize
+  if (categoryLeftSwipes.length >= 5) return -20;
+  if (categoryLeftSwipes.length === 4) return -15;
+  if (categoryLeftSwipes.length === 3) return -10;
+  if (categoryLeftSwipes.length === 2) return -5;
+  
+  return 0;
+};
+
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 
@@ -263,6 +290,10 @@ const scoreMeals = (
     if ((input.todaysCategoryCount[meal.category] ?? 0) >= 2) {
       contextScore -= 5;
     }
+
+    // Add category variety learning - penalize frequently disliked categories
+    const categoryDislikeScore = getCategoryDislikeScore(input.swipes, meal.category, meal.id);
+    contextScore += categoryDislikeScore;
 
     if (wasRecentlySwiped(input.swipes, meal.id)) {
       continue;

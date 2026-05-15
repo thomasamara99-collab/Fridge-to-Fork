@@ -85,7 +85,7 @@ export default async function MealDetailPage({
         <p className="text-sm text-text-secondary">{meal.description}</p>
       </header>
 
-      <MealDetailActions mealId={meal.id} mealName={meal.name} />
+      <MealDetailActions mealId={meal.id} mealName={meal.name} calories={meal.calories} protein={meal.protein} />
 
       <section className="overflow-hidden rounded-card border border-border bg-surface shadow-[0_2px_12px_rgba(0,0,0,0.06),_0_0_0_0.5px_rgba(0,0,0,0.04)]">
         {meal.photoPath ? (
@@ -248,7 +248,7 @@ export default async function MealDetailPage({
         </ol>
       </section>
 
-      <MealDetailActions mealId={meal.id} mealName={meal.name} />
+      <MealDetailActions mealId={meal.id} mealName={meal.name} calories={meal.calories} protein={meal.protein} />
     </main>
   );
 }

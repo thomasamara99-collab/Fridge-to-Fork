@@ -58,16 +58,16 @@ export default function Step4Page() {
       cookingSkill: skill,
       budget: "medium",
     });
-    router.push("/onboarding/step-5");
+    router.push("/onboarding/complete");
   };
 
   return (
     <StepLayout
       step={4}
-      total={6}
+      total={4}
       title="Dietary preferences"
       subtitle="Pick what you avoid so we only show meals that fit."
-      ctaLabel="Continue"
+      ctaLabel="Complete setup"
       onBack="/onboarding/step-3"
       onSubmit={(event) => {
         event.preventDefault();
